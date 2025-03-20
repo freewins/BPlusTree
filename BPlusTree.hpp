@@ -9,7 +9,7 @@
 #include <fstream>
 #include <string>
 #include <memory>
-
+//TODO 引入一个标准常数 避免出现溢出
 template<
   class T,
   class Key,
@@ -40,13 +40,12 @@ private:
   struct NodeHeader {
     bool is_leaf; //是否是叶节点
     long long offset; //自己所在的位置
-    long long next_node_offset; //下一个节点的偏移位置
     long long father_offset; // 父节点
     long long count_nodes; //存储节点数量
 
     NodeHeader() {
       is_leaf = false;
-      offset = next_node_offset = count_nodes = 0;
+      offset = count_nodes = 0;
       father_offset = -1;
     }
 
@@ -58,14 +57,16 @@ private:
    */
   struct InternalNode {
     NodeHeader header; //节点头
-    Key keys_[degree - 1]; //键值 为degree - 1
-    long long children_offset[degree]; // 孩子的偏移值 ，标记了孩子节点的位置
+    Key keys_[degree]; //键值 为degree - 1
+    long long children_offset[degree + 1]; // 孩子的偏移值 ，标记了孩子节点的位置
   };
   /**
    *数据节点，存储了所有的叶节点对应的数据以及键值
    */
   struct LeafNode {
     NodeHeader header; // 节点头
+    long long pre_node_offset; //上一个节点的偏移位置
+    long long next_node_offset; //下一个节点的偏移位置
     Key keys_[degree]; // 键值
     T values_[degree]; //数据
   };
@@ -78,7 +79,20 @@ private:
   LeafNode * leaf_node_root_;
   Compare compare_;
 
-  //
+  long long getEndPos();
+
+  void InsertKey(const Key & new_key, Key  * keys_,const int & index,const int & size) ;
+
+  void InsertValue(const T & new_value,T * values_,const int & index,const int & size) ;
+
+  /**
+   *
+   * @param pos
+   * @param children
+   * @param index
+   * @param size 在进行内部节点split时，会出现size < index的情况，这时候要直接进行插入
+   */
+  void InsertChild(long long pos, long long * children,const int & index,const int & size);
   /**
    * 返回大于当前的值的位置 用于internal的内部查找
    * @param key 查找值
@@ -103,163 +117,48 @@ private:
 
   void ReadInternalNode(std::fstream & file,InternalNode * & internal_node,long long pos) ;
 
-  void ReadLeafNode(std::fstream & file,LeafNode * & leaf_node,long long pos) ;
+  void ReadLeafNode(std::fstream & file,LeafNode * & leaf_node,long long pos);
+
+  /**
+   * 写入文件头
+   * @param file 文件流
+   * @param file_header 文件头指针
+   * @return 返回插入指针位置
+   */
+  long long WriteFileHeader(std::fstream & file,FileHeader * & file_header) ;
+
+  /**
+   * 在每次写入前，请确认是否同步了 header指针和internal 里面的值，虽然本质上他们是一个东西
+   * @param file
+   * @param internal_node
+   * @param pos 若是小于0 为末尾添加模式
+   * @return 返回写入指针位置
+   */
+  long long  WriteInternalNode(std::fstream & file,InternalNode * & internal_node,long long pos) ;
+
+  /**
+   * 在每次写入前，请确认是否同步了 header指针和internal 里面的值，虽然本质上他们是一个东西
+   * @param file
+   * @param leaf_node
+   * @param pos
+   * @return 返回写入指针位置
+   */
+  long long WriteLeafNode(std::fstream & file,LeafNode * & leaf_node,long long pos);
+
+
+  //split the leaf node
+  void Split(std::fstream & file,LeafNode * & leaf_node);
+
+  //split the internal node
+  void Split(std::fstream & file,InternalNode * internal_node);
 
 public:
   BPlusTree(const std::string& path);
 
-  bool insert(const Key & key, const T & value);
+  bool Insert(const Key & key, const T & value);
 };
 
-template<class T, class Key, class Compare, int degree>
-void BPlusTree<T, Key, Compare, degree>::
-ReadFileHeader(std::fstream &file, FileHeader *&file_header) {
-  if (file.fail()) {
-    return;
-  }
-  file.seekg(0, std::ios::beg);
-  file.read(reinterpret_cast<char*>(file_header), sizeof(FileHeader));
-}
-
-template<class T, class Key, class Compare, int degree>
-void BPlusTree<T, Key, Compare, degree>::
-ReadNodeHeader(std::fstream &file, NodeHeader *&node_header,long long pos) {
-  if (file.fail()) {
-    return;
-  }
-  file.seekg(pos, std::ios::beg);
-  file.read(reinterpret_cast<char*>(node_header), sizeof(NodeHeader));
-
-}
 
 
-template<class T, class Key, class Compare, int degree>
-void BPlusTree<T, Key, Compare, degree>::ReadLeafNode(std::fstream &file, LeafNode *&leaf_node, long long pos) {
-  if (file.fail()) {
-    return;
-  }
-  file.seekg(pos, std::ios::beg);
-  file.read(reinterpret_cast<char*>(leaf_node), sizeof(LeafNode));
-}
-template<class T, class Key, class Compare, int degree>
-void BPlusTree<T, Key, Compare, degree>::ReadInternalNode(std::fstream &file, InternalNode *&internal_node, long long pos) {
-  if (file.fail()) {
-    return;
-  }
-  file.seekg(pos, std::ios::beg);
-  file.read(reinterpret_cast<char*>(internal_node), sizeof(InternalNode));
-}
-
-
-template<class T, class Key, class Compare, int degree>
-int BPlusTree<T, Key, Compare, degree>::Upper_Bound(const Key &key, const Key * key_values,const int size) const {
-  int left = 0 , right = size - 1;
-  int mid = 0;
-  while (left <= right) {
-    mid = (left + right) / 2;
-    if (compare_(key,key_values[mid])) {
-      right = mid - 1;
-    }
-    else {
-      left = mid + 1;
-    }
-  }
-  return left;
-}
-
-template<class T, class Key, class Compare, int degree>
-int BPlusTree<T, Key, Compare, degree>::Lower_Bound(const Key &key, const Key * key_values, const int size) const {
-  int left = 0,right = size -1;
-  int mid = 0;
-  while (left <= right) {
-    mid = (left + right) / 2;
-    if (compare_(key_values[mid],key)) {
-      left = mid + 1;
-    }
-    else if (compare_(key,key_values[mid])) {
-      right = mid - 1;
-    }
-    else {
-      if (mid == 0)
-        return -1;
-      return -1 * mid;
-    }
-  }
-  return left;
-}
-
-
-
-template<class T, class Key, class Compare, int degree>
-BPlusTree<T, Key, Compare, degree>::BPlusTree(const std::string &path) {
-  file_.open(path_,std::ios::binary|std::ios::in|std::ios::out);
-  if (!file_.is_open()) {
-    file_.open(path_,std::ios::binary|std::ios::out);
-    file_.close();
-    file_.open(path_,std::ios::binary|std::ios::in|std::ios::out);
-    this -> file_header_ = new FileHeader();
-    this -> node_header_root_ = new NodeHeader();
-    this -> node_header_root_ -> is_leaf = true;
-    this -> node_header_root_ -> offset = file_header_ -> root_offset;
-  }
-  //TODO 在这里一定要写一个为空时写入叶子节点的数据
-  else {
-    this->ReadFileHeader(file_,file_header_);
-    this->ReadNodeHeader(file_,node_header_root_,file_header_->root_offset);
-  }
-  if (this -> node_header_root_ -> is_leaf) {
-    this -> ReadLeafNode(file_,leaf_node_root_,file_header_->root_offset);
-  }
-  else {
-    this -> ReadInternalNode(file_,internal_node_root_,file_header_->root_offset);
-  }
-}
-
-
-
-template<class T, class Key, class Compare, int degree>
-bool BPlusTree<T, Key, Compare, degree>::insert(const Key &key, const T &value) {
-  //Solution 1 : 不需要把root 中内容存到内存中，直接从pos 开始循环 好处：可以进行良好的结构设计  坏处: 没法做成缓存，速度变慢
-  //采用solution 1
-  //Solution 2 : 把root 放在内存中，可以减少一定的硬盘 io 但是结构设计比较丑陋
-  NodeHeader * cur = this -> node_header_root_;
-  InternalNode * cur_internal_node = new InternalNode();
-  while (!cur -> is_leaf) {
-
-    this -> ReadInternalNode(file_,cur_internal_node,cur->offset);
-    //找到大于等于它的最大值
-    int index = Upper_Bound(key,cur_internal_node->keys_,cur->count_nodes);
-    this -> ReadNodeHeader(file_,cur,cur_internal_node -> children_offset[index]);
-  }
-  delete cur_internal_node;
-  //到达叶节点
-  LeafNode * cur_leaf_node  = new LeafNode();
-  this -> ReadLeafNode(file_, cur_leaf_node,cur->offset);
-  int index = Lower_Bound(key,cur_leaf_node->keys_,cur->count_nodes);
-  if (index < 0) {
-    delete cur_leaf_node;
-    return false;
-  }
-  else {
-    Key * cur_key = new Key[degree];
-    T * cur_value = new T[degree];
-    memcpy(cur_key,cur_leaf_node->keys_+index,sizeof(Key) * (cur -> count_nodes - index));
-    memcpy(cur_value,cur_leaf_node->values_+index,sizeof(T) * (cur -> count_nodes - index));
-    cur_leaf_node -> keys_[index] = key;
-    cur_leaf_node -> values_[index] = value;
-    memcpy(cur_leaf_node->values_+index + 1,cur_value,sizeof(T) * (cur -> count_nodes - index));
-    memcpy(cur_leaf_node->keys_+index + 1,cur_key,sizeof(T) * (cur -> count_nodes - index));
-    delete cur_value;
-    delete cur_key;
-    ++cur->count_nodes;
-    ++this->file_header_->count_nodes; //TODO is necessary???
-    //TODO Split
-  }
-  if (cur != this -> node_header_root_) {
-    this -> ReadNodeHeader(file_,cur,this->file_header_->root_offset);
-  }
-  delete cur_leaf_node;
-  return true;
-}
 
 #endif //BPLUSTREE_HPP
