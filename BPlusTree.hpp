@@ -4,7 +4,7 @@
 
 #ifndef BPLUSTREE_HPP
 #define BPLUSTREE_HPP
-#define DEBUG
+
 #include <cstring>
 #include <functional>
 #include <fstream>
@@ -14,8 +14,8 @@
 template<
   class T,
   class Key,
-  class Compare = std::less<T>,
-  int degree = 10
+  int degree = 10,
+ class Compare = std::less<T>
 >
 class BPlusTree {
 private:
@@ -151,6 +151,7 @@ private:
    */
   long long WriteFileHeader(std::fstream & file,FileHeader * & file_header) ;
 
+  long long WriteNodeHeader(std::fstream & file,NodeHeader * & node_header,long long pos) ;
   /**
    * 在每次写入前，请确认是否同步了 header指针和internal 里面的值，虽然本质上他们是一个东西
    * @param file
@@ -190,7 +191,7 @@ private:
   void Merge(std::fstream & file,LeafNode * & leaf_node);
 
   /**
-   * 用于进行内部节点的合并
+   * 用于进行内部节点的合并,注意这里面我们对于传入节点的内存不能进行删除，不然会造成double free
    * @param file
    * @param internal_node
    */
@@ -198,14 +199,18 @@ private:
 
 
 public:
+
+  BPlusTree()=delete;
+
   BPlusTree(const std::string& path);
+
+  ~BPlusTree();
 
   bool Insert(const Key & key, const T & value);
 
   bool Remove(const Key & key);
 };
 
-
-
+#include "BPlusTree.tcc"
 
 #endif //BPLUSTREE_HPP
