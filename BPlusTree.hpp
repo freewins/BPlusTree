@@ -4,6 +4,7 @@
 
 #ifndef BPLUSTREE_HPP
 #define BPLUSTREE_HPP
+#define DEBUG
 #include <cstring>
 #include <functional>
 #include <fstream>
@@ -69,22 +70,39 @@ private:
     long long next_node_offset; //下一个节点的偏移位置
     Key keys_[degree]; // 键值
     T values_[degree]; //数据
+
+
+    LeafNode() {
+      header.is_leaf = true;
+      pre_node_offset = next_node_offset = -1;
+    }
   };
 
-  const std::string path_;
+  const std::string PATH_;
+  const int LIMIT =  (degree + 1) / 2;;
   std::fstream file_;
   FileHeader * file_header_;
   NodeHeader * node_header_root_;
-  InternalNode * internal_node_root_;
-  LeafNode * leaf_node_root_;
   Compare compare_;
 
   long long getEndPos();
 
-  void InsertKey(const Key & new_key, Key  * keys_,const int & index,const int & size) ;
+  void InsertKey(const Key & new_key, Key  * keys_,const int & index,const int & size);
 
-  void InsertValue(const T & new_value,T * values_,const int & index,const int & size) ;
+  void InsertValue(const T & new_value,T * values_,const int & index,const int & size);
 
+  /**
+   * 注意这里移除后不会进行size--的操作，因为后面还会进行value或者child的操作，要自己进行
+   * @param keys_
+   * @param index
+   * @param size
+   */
+  void RemoveKey(Key * keys_,const int & index, const int & size);
+
+  //TODO 考虑将删除封装成 internal 和 leaf 的这样进行size--的操作就比较方便，封闭性好
+  void RemoveValue(T * values_,const int & index,const int & size);
+
+  void RemoveChild(long long * children,const int & index,const int & size);
   /**
    *
    * @param pos
@@ -117,6 +135,12 @@ private:
 
   void ReadInternalNode(std::fstream & file,InternalNode * & internal_node,long long pos) ;
 
+  /**
+   * 读入叶子节点
+   * @param file 文件流
+   * @param leaf_node 要存入的叶节点内存
+   * @param pos 读取的位置
+   */
   void ReadLeafNode(std::fstream & file,LeafNode * & leaf_node,long long pos);
 
   /**
@@ -152,10 +176,33 @@ private:
   //split the internal node
   void Split(std::fstream & file,InternalNode * internal_node);
 
+  /**
+   * 检测是否merge
+   * @param cur_node_header
+   * @return true 进行 false 不进行
+   */
+  bool CheckMerge(NodeHeader * cur_node_header);
+  /**
+   * 用于进行remove后的叶节点合并
+   * @param file 传入文件头 是否有必要？？
+   * @param leaf_node 叶节点
+   */
+  void Merge(std::fstream & file,LeafNode * & leaf_node);
+
+  /**
+   * 用于进行内部节点的合并
+   * @param file
+   * @param internal_node
+   */
+  void Merge(std::fstream & file,InternalNode * internal_node);
+
+
 public:
   BPlusTree(const std::string& path);
 
   bool Insert(const Key & key, const T & value);
+
+  bool Remove(const Key & key);
 };
 
 
