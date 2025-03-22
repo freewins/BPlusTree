@@ -182,9 +182,12 @@ bool BPlusTree<T, Key, degree, Compare>::Insert(const Key &key, const T &value) 
     InsertValue(value, cur_leaf_node->values_, index, cur_leaf_node->header.count_nodes);
     ++cur_leaf_node->header.count_nodes;
     ++this->file_header_->node_count; //TODO is necessary???
-    //TODO Split
-    Split(file_, cur_leaf_node);
+    //一个重要的Bug 修正
+    //最开始我是在Split后才进行写入，但是这会导致一个问题，Split中在修正父节点的时候，直接对外存进行操作，修改其父节点
+    //但是内存中的父节点并没有被修改，所以Split后写入会导致父节点修改失效，存储失败
+    //这句话不要删，虽然Split里面有写入函数，但是进行Split 的概率很低
     WriteLeafNode(file_, cur_leaf_node, cur_leaf_node->header.offset);
+    Split(file_, cur_leaf_node);
   }
   if (this->file_header_->root_offset != this ->node_header_root_->offset) {
     this->ReadNodeHeader(file_, this->node_header_root_, this->file_header_->root_offset);
@@ -256,9 +259,10 @@ void BPlusTree<T, Key, degree, Compare>::Split(std::fstream &file, LeafNode *&le
   ++cur_internal_node->header.count_nodes;
   //
   WriteLeafNode(file_,new_leaf_node,new_leaf_node->header.offset);
+  WriteLeafNode(file_,leaf_node,leaf_node->header.offset);
   delete new_leaf_node;
-  Split(file_, cur_internal_node);
   WriteInternalNode(file_, cur_internal_node, cur_internal_node->header.offset);
+  Split(file_, cur_internal_node);
   delete cur_internal_node;
 }
 
@@ -299,7 +303,7 @@ void BPlusTree<T, Key, degree, Compare>::Split(std::fstream &file, InternalNode 
   new_internal_node->header.father_offset = father_internal_node->header.offset;
   new_internal_node->header.is_leaf = false;
   new_internal_node->header.offset = getEndPos();
-  //更新字节点的父亲
+  //更新子节点的父亲
   ChangeFather(new_internal_node->children_offset,new_internal_node->header.count_nodes + 1,new_internal_node->header.offset);
   internal_node->header.count_nodes = change_pos;
   internal_node->header.father_offset = father_internal_node->header.offset;
