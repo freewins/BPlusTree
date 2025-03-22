@@ -60,6 +60,9 @@ private:
     NodeHeader header; //节点头
     Key keys_[degree]; //键值 为degree - 1
     long long children_offset[degree + 1]; // 孩子的偏移值 ，标记了孩子节点的位置
+    InternalNode() {
+      memset(keys_, 0, sizeof(keys_));
+    }
   };
   /**
    *数据节点，存储了所有的叶节点对应的数据以及键值
@@ -73,6 +76,8 @@ private:
 
 
     LeafNode() {
+      memset(keys_, 0, sizeof(keys_));
+      memset(values_, 0, sizeof(values_));
       header.is_leaf = true;
       pre_node_offset = next_node_offset = -1;
     }
@@ -121,18 +126,25 @@ private:
   int Upper_Bound(const Key & key,const Key * key_values, const int size) const;
 
   /**
-   * 返回大于等于当前值的位置 ， 出现等于 返回 -1 * index
+   * 返回大于等于当前值的位置
    * @param key 查找值
    * @param size key_values 数组大小
    * @param key_values 查找的数组
+   * @param find 是否找到相等的值
    * @return 返回索引值，大于最大值 返回 size
    */
-  int Lower_Bound(const Key & key,const Key * key_values, const int size) const;
+  int Lower_Bound(const Key & key,const Key * key_values, const int size,bool & find) const;
   //从文件中读入文件头
   void ReadFileHeader(std::fstream & file,FileHeader * & file_header) ;
 
   void ReadNodeHeader(std::fstream & file,NodeHeader * & node_header,long long pos) ;
 
+  /**
+   * 
+   * @param file 
+   * @param internal_node 
+   * @param pos 
+   */
   void ReadInternalNode(std::fstream & file,InternalNode * & internal_node,long long pos) ;
 
   /**
@@ -177,6 +189,7 @@ private:
   //split the internal node
   void Split(std::fstream & file,InternalNode * internal_node);
 
+  void ChangeFather(long long * children, int size_,long long father_offset_);
   /**
    * 检测是否merge
    * @param cur_node_header
@@ -209,6 +222,8 @@ public:
   bool Insert(const Key & key, const T & value);
 
   bool Remove(const Key & key);
+
+  T Search(const Key & key,bool & find);
 };
 
 #include "BPlusTree.tcc"
