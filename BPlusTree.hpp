@@ -161,9 +161,9 @@ private:
    * @param file_header 文件头指针
    * @return 返回插入指针位置
    */
-  long long WriteFileHeader(std::fstream & file,FileHeader * & file_header) ;
+  long long WriteFileHeader(std::fstream & file,FileHeader * & file_header);
 
-  long long WriteNodeHeader(std::fstream & file,NodeHeader * & node_header,long long pos) ;
+  long long WriteNodeHeader(std::fstream & file,NodeHeader * & node_header,long long pos);
   /**
    * 在每次写入前，请确认是否同步了 header指针和internal 里面的值，虽然本质上他们是一个东西
    * @param file
@@ -181,7 +181,6 @@ private:
    * @return 返回写入指针位置
    */
   long long WriteLeafNode(std::fstream & file,LeafNode * & leaf_node,long long pos);
-
 
   //split the leaf node
   void Split(std::fstream & file,LeafNode * & leaf_node);
