@@ -84,7 +84,7 @@ private:
   };
 
   const std::string PATH_;
-  const int LIMIT =  (degree + 1) / 2;;
+  const int LIMIT =  (degree + 1) / 2;
   std::fstream file_;
   FileHeader * file_header_;
   NodeHeader * node_header_root_;
