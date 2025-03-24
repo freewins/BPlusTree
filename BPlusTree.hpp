@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <functional>
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <memory>
@@ -15,7 +16,8 @@ template<
   class T,
   class Key,
   int degree = 10,
- class Compare = std::less<T>
+ class Compare = std::less<Key>,
+ class Compare_ = std::less<T>
 >
 class BPlusTree {
 private:
@@ -59,7 +61,7 @@ private:
   struct InternalNode {
     NodeHeader header; //节点头
     Key keys_[degree]; //键值 为degree - 1
-    long long children_offset[degree + 1]; // 孩子的偏移值 ，标记了孩子节点的位置
+    long long children_offset[degree + 1]={}; // 孩子的偏移值 ，标记了孩子节点的位置
     InternalNode() {
       memset(keys_, 0, sizeof(keys_));
     }
@@ -89,6 +91,7 @@ private:
   FileHeader * file_header_;
   NodeHeader * node_header_root_;
   Compare compare_;
+  Compare_ comp_;
 
   long long getEndPos();
 
@@ -134,6 +137,8 @@ private:
    * @return 返回索引值，大于最大值 返回 size
    */
   int Lower_Bound(const Key & key,const Key * key_values, const int size,bool & find) const;
+
+  int upper_bound(const T & value,const T * T_values, const int size,bool & find ) const;
   //从文件中读入文件头
   void ReadFileHeader(std::fstream & file,FileHeader * & file_header) ;
 
