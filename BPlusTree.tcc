@@ -299,12 +299,14 @@ void BPlusTree<T, Key, degree, Compare>::Split(std::fstream &file, InternalNode 
   //更新child
   memcpy(new_internal_node->children_offset, internal_node->children_offset + change_pos + 1,
          sizeof(long long) * (internal_node->header.count_nodes - change_pos));
+  //修改新节点
   new_internal_node->header.count_nodes = internal_node->header.count_nodes - change_pos - 1;
   new_internal_node->header.father_offset = father_internal_node->header.offset;
   new_internal_node->header.is_leaf = false;
   new_internal_node->header.offset = getEndPos();
   //更新子节点的父亲
   ChangeFather(new_internal_node->children_offset,new_internal_node->header.count_nodes + 1,new_internal_node->header.offset);
+  //修改初始节点
   internal_node->header.count_nodes = change_pos;
   internal_node->header.father_offset = father_internal_node->header.offset;
   WriteInternalNode(file_, new_internal_node, new_internal_node->header.offset);
@@ -313,6 +315,7 @@ void BPlusTree<T, Key, degree, Compare>::Split(std::fstream &file, InternalNode 
   InsertChild(new_internal_node->header.offset, father_internal_node->children_offset, index + 1,
               father_internal_node->header.count_nodes + 1);
   ++father_internal_node->header.count_nodes;
+  //写入
   WriteInternalNode(file_, father_internal_node, father_internal_node->header.offset);
   delete new_internal_node;
   Split(file_, father_internal_node);
@@ -648,10 +651,10 @@ void BPlusTree<T, Key, degree, Compare>::Merge(std::fstream &file, LeafNode *&le
       right_node->header.count_nodes = 0;
       InternalNode *internal_node = new InternalNode();
       ReadInternalNode(file_, internal_node, right_node->header.father_offset);
-      int index = Upper_Bound(left_node->keys_[0], internal_node->keys_, internal_node->header.count_nodes);
+      int index = Upper_Bound(right_node->keys_[0], internal_node->keys_, internal_node->header.count_nodes);
 
-      RemoveKey(internal_node->keys_, index, internal_node->header.count_nodes);
-      RemoveChild(internal_node->children_offset, index + 1, internal_node->header.count_nodes + 1);
+      RemoveKey(internal_node->keys_, index - 1, internal_node->header.count_nodes);
+      RemoveChild(internal_node->children_offset, index, internal_node->header.count_nodes + 1);
       --internal_node->header.count_nodes;
       WriteInternalNode(file_, internal_node, internal_node->header.offset);
       if (left_node->next_node_offset != -1) {
@@ -716,10 +719,9 @@ bool BPlusTree<T, Key, degree, Compare>::Remove(const Key &key) {
 
 template<class T, class Key, int degree, class Compare>
 BPlusTree<T, Key, degree, Compare>::~BPlusTree() {
-  WriteNodeHeader(file_,node_header_root_,node_header_root_->offset);
-  delete node_header_root_;
   WriteFileHeader(file_,file_header_);
   delete file_header_;
+  delete node_header_root_;
   file_.close();
 }
 
