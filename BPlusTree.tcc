@@ -445,7 +445,10 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfValue(const T &value
   //获取key 的位置
   int key_upper = Upper_Bound(key,leaf_node->keys_,leaf_node->header.count_nodes);
   int pre_index = lower_bound(value,leaf_node->values_ + key_index,key_upper - key_index,find) + key_index;
-  while (!find ) {
+  while (!find) {
+    if (pre_index > 0 &&pre_index  <= leaf_node->header.count_nodes ) {
+      break;
+    }
     if (key_index != 0 || leaf_node -> pre_node_offset == -1) {
       break;
     }
@@ -454,9 +457,6 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfValue(const T &value
       key_index = Lower_Bound(key,leaf_node->keys_,leaf_node->header.count_nodes,find_key);
       if (find_key) {
         pre_index = lower_bound(value,leaf_node->values_ + key_index,leaf_node->header.count_nodes - key_index,find);
-        if (pre_index > 0 &&pre_index  <= leaf_node->header.count_nodes ) {
-          break;
-        }
       }
       else {
         break;
