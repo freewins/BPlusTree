@@ -3,7 +3,7 @@
 #include "BPlusTree.hpp"
 
 int main() {
-  freopen("output.txt", "w", stdout);
+  //freopen("output.txt", "w", stdout);
   struct Key {
     char key_[66] = {};
     Key() {
