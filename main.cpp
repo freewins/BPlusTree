@@ -17,7 +17,7 @@ int main() {
       return strcmp(key_, other.key_) < 0;
     }
   };
-  BPlusTree<int,Key,10> tree("total.data");
+  BPlusTree<int,Key,600> tree("total.data");
   std::string op;
   char key[66];
   Key t;
