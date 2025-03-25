@@ -208,9 +208,10 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Insert(const Key &key, const 
   LeafNode *cur_leaf_node = new LeafNode();
   this->ReadLeafNode(file_, cur_leaf_node, cur->offset);
   bool found = false;
-  int index_next = Upper_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes);
-  int index_pre = Lower_Bound(key,cur_leaf_node->keys_, cur_leaf_node->header.count_nodes,found);
-  int index = upper_bound(value,cur_leaf_node->values_ + index_pre,index_next - index_pre) + index_pre;
+  int index = GetIndexOfValue(value,key,cur_leaf_node,found);
+  // int index_next = Upper_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes);
+  // int index_pre = Lower_Bound(key,cur_leaf_node->keys_, cur_leaf_node->header.count_nodes,found);
+  // int index = upper_bound(value,cur_leaf_node->values_ + index_pre,index_next - index_pre) + index_pre;
   InsertKey(key, cur_leaf_node->keys_, index, cur_leaf_node->header.count_nodes);
   InsertValue(value, cur_leaf_node->values_, index, cur_leaf_node->header.count_nodes);
   ++cur_leaf_node->header.count_nodes;
@@ -245,7 +246,11 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Lea
 
   if (leaf_node->header.father_offset != -1) {
     ReadInternalNode(file_, cur_internal_node, leaf_node->header.father_offset);
+    bool find_ = false;
     index = GetIndexOfOffset(leaf_node->header.offset,cur_internal_node,leaf_node->keys_[change_pos]);
+    // if (find_) {
+    //   ++index;
+    // }
     //index = Upper_Bound(leaf_node->keys_[change_pos], cur_internal_node->keys_, cur_internal_node->header.count_nodes);
     InsertKey(leaf_node->keys_[change_pos], cur_internal_node->keys_, index, cur_internal_node->header.count_nodes);
   } else {
@@ -431,9 +436,9 @@ long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteLeafNode(std::fstre
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfValue(const T &value, const Key &key, LeafNode *leaf_node, bool &find) {
-  if (leaf_node == nullptr) {
+  if (leaf_node == nullptr || leaf_node ->header.count_nodes == 0) {
     find = false;
-    return -1;
+    return 0;
   }
   bool find_key = false;
   int key_index = Lower_Bound(key,leaf_node->keys_,leaf_node->header.count_nodes, find_key);
@@ -449,6 +454,9 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfValue(const T &value
       key_index = Lower_Bound(key,leaf_node->keys_,leaf_node->header.count_nodes,find_key);
       if (find_key) {
         pre_index = lower_bound(value,leaf_node->values_ + key_index,leaf_node->header.count_nodes - key_index,find);
+        if (pre_index > 0 &&pre_index  <= leaf_node->header.count_nodes ) {
+          break;
+        }
       }
       else {
         break;

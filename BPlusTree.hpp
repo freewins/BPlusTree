@@ -143,7 +143,8 @@ private:
   int lower_bound(const T & value,const T * T_values, const int size,bool & find ) const;
 
   /**
-   * 用于Remove中寻找对应value的位置并修改传入指针的内容，确保其指向真正删除的位置
+   * 用于Remove中寻找对应value的位置并修改传入指针的内容，确保其指向真正删除的位置 同时在进行删除的时候，可以确保index返回最适合进行插入的位置
+   * 如果在中间，就直接进行插入，如果在文件头部，会选择前面文件的尾部 若前面没有文件，就在当前文件的尾部
    * @param value 要删除的值
    * @param key 用于寻找上一个块
    * @param leaf_node 叶指针
