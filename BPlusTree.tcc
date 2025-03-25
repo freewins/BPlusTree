@@ -14,9 +14,7 @@ long long BPlusTree<T, Key, degree, Compare, Compare_>::getEndPos() {
 }
 
 template<class T, class Key, int degree, class Compare,class Compare_>
-int BPlusTree<T, Key, degree, Compare, Compare_>::
-
-Upper_Bound(const Key &key, const Key *key_values, const int size) const {
+int BPlusTree<T, Key, degree, Compare, Compare_>::Upper_Bound(const Key &key, const Key *key_values, const int size) const {
   int left = 0, right = size - 1;
   int mid = 0;
   while (left <= right) {
@@ -42,18 +40,17 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::Lower_Bound(const Key &key, co
     } else if (compare_(key, key_values[mid])) {
       right = mid - 1;
     } else {
+      right = mid - 1;
       find = true;
-      return mid;
     }
   }
   return left;
 }
 //加入compare函数
 template<class T, class Key, int degree, class Compare,class Compare_>
-int BPlusTree<T, Key, degree, Compare, Compare_>::upper_bound(const T &value, const T *T_values, const int size, bool &find) const {
+int BPlusTree<T, Key, degree, Compare, Compare_>::upper_bound(const T &value, const T *T_values, const int size) const {
   int left = 0, right = size - 1;
   int mid = 0;
-  find = false;
   while (left <= right) {
     mid = (left + right) >> 1;
     if (comp_( value,T_values[mid])) {
@@ -64,6 +61,27 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::upper_bound(const T &value, co
   }
   return left;
 }
+
+template<class T, class Key, int degree, class Compare, class Compare_>
+int BPlusTree<T, Key, degree, Compare, Compare_>::lower_bound(const T &value, const T *T_values, const int size, bool &find) const {
+  int left = 0, right = size - 1;
+  int mid = 0;
+  find = false;
+  while (left <= right) {
+    mid = (left + right) >> 1;
+    if (comp_( T_values[mid],value)) {
+      left = mid + 1;
+    }else if (comp_(value,T_values[mid])) {
+      right = mid - 1;
+    }
+    else {
+      right = mid - 1;
+      find = true;
+    }
+  }
+  return left;
+}
+
 
 template<class T, class Key, int degree, class Compare,class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::InsertKey(const Key &new_key, Key *keys_, const int &index, const int &size) {
@@ -190,7 +208,9 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Insert(const Key &key, const 
   LeafNode *cur_leaf_node = new LeafNode();
   this->ReadLeafNode(file_, cur_leaf_node, cur->offset);
   bool found = false;
-  int index = Upper_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes);
+  int index_next = Upper_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes);
+  int index_pre = Lower_Bound(key,cur_leaf_node->keys_, cur_leaf_node->header.count_nodes,found);
+  int index = upper_bound(value,cur_leaf_node->values_ + index_pre,index_next - index_pre) + index_pre;
   InsertKey(key, cur_leaf_node->keys_, index, cur_leaf_node->header.count_nodes);
   InsertValue(value, cur_leaf_node->values_, index, cur_leaf_node->header.count_nodes);
   ++cur_leaf_node->header.count_nodes;
@@ -225,7 +245,8 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Lea
 
   if (leaf_node->header.father_offset != -1) {
     ReadInternalNode(file_, cur_internal_node, leaf_node->header.father_offset);
-    index = Upper_Bound(leaf_node->keys_[change_pos], cur_internal_node->keys_, cur_internal_node->header.count_nodes);
+    index = GetIndexOfOffset(leaf_node->header.offset,cur_internal_node,leaf_node->keys_[change_pos]);
+    //index = Upper_Bound(leaf_node->keys_[change_pos], cur_internal_node->keys_, cur_internal_node->header.count_nodes);
     InsertKey(leaf_node->keys_[change_pos], cur_internal_node->keys_, index, cur_internal_node->header.count_nodes);
   } else {
     //根数据,创建新的内部节点
@@ -288,8 +309,8 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Int
   int change_pos = (internal_node->header.count_nodes / 2);
   if (internal_node->header.father_offset != -1) {
     ReadInternalNode(file_, father_internal_node, internal_node->header.father_offset);
-    index = Upper_Bound(internal_node->keys_[change_pos], father_internal_node->keys_,
-                        father_internal_node->header.count_nodes);
+    index = GetIndexOfOffset(internal_node->header.offset,father_internal_node,internal_node->keys_[change_pos]);
+     //Upper_Bound(internal_node->keys_[change_pos], father_internal_node->keys_,father_internal_node->header.count_nodes);
     InsertKey(internal_node->keys_[change_pos], father_internal_node->keys_, index,
               father_internal_node->header.count_nodes);
   } else {
@@ -408,6 +429,55 @@ long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteLeafNode(std::fstre
   return file.tellp();
 }
 
+template<class T, class Key, int degree, class Compare, class Compare_>
+int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfValue(const T &value, const Key &key, LeafNode *leaf_node, bool &find) {
+  if (leaf_node == nullptr) {
+    find = false;
+    return -1;
+  }
+  bool find_key = false;
+  int key_index = Lower_Bound(key,leaf_node->keys_,leaf_node->header.count_nodes, find_key);
+  //获取key 的位置
+  int key_upper = Upper_Bound(key,leaf_node->keys_,leaf_node->header.count_nodes);
+  int pre_index = lower_bound(value,leaf_node->values_ + key_index,key_upper - key_index,find) + key_index;
+  while (!find ) {
+    if (key_index != 0 || leaf_node -> pre_node_offset == -1) {
+      break;
+    }
+    else {
+      ReadLeafNode(file_,leaf_node,leaf_node->pre_node_offset);
+      key_index = Lower_Bound(key,leaf_node->keys_,leaf_node->header.count_nodes,find_key);
+      if (find_key) {
+        pre_index = lower_bound(value,leaf_node->values_ + key_index,leaf_node->header.count_nodes - key_index,find);
+      }
+      else {
+        break;
+      }
+    }
+  }
+  return pre_index;
+}
+
+template<class T, class Key, int degree, class Compare, class Compare_>
+int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfOffset(long long &offset, InternalNode *internal_node, Key &key) {
+  bool find_key = false;
+  int next_index = Upper_Bound(key,internal_node->keys_,internal_node->header.count_nodes);
+  int pre_index = Lower_Bound(key,internal_node->keys_,internal_node->header.count_nodes,find_key);
+  if (find_key) {
+    for (int i = pre_index; i <= next_index; i++) {
+      if (internal_node->children_offset[i] == offset) {
+        return i;
+      }
+    }
+    return next_index;
+  }
+  else {
+    return next_index;
+  }
+}
+
+
+
 template<class T, class Key, int degree, class Compare,class Compare_>
 bool BPlusTree<T, Key, degree, Compare, Compare_>::CheckMerge(NodeHeader *cur_node_header) {
   if (cur_node_header->is_leaf) {
@@ -440,7 +510,8 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
       NodeHeader *right_cur = new NodeHeader();
       bool right_ = false, left_ = false;
       //找到该节点在父节点中的位置
-      int index = Upper_Bound(internal_node->keys_[0], father_node->keys_, father_node->header.count_nodes);
+      int index = GetIndexOfOffset(internal_node->header.offset,father_node,internal_node->keys_[0]);
+      //int index = Upper_Bound(internal_node->keys_[0], father_node->keys_, father_node->header.count_nodes);
       if (index > 0) {
         //有左兄弟
         left_ = true;
@@ -663,8 +734,9 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
       right_node->header.count_nodes = 0;
       InternalNode *internal_node = new InternalNode();
       ReadInternalNode(file_, internal_node, right_node->header.father_offset);
-      int index = Upper_Bound(right_node->keys_[0], internal_node->keys_, internal_node->header.count_nodes);
-
+      //find 是用来寻找下界，以为了确保找到正确的位置
+      int index = GetIndexOfOffset(right_node->header.offset,internal_node,right_node->keys_[0]);
+      //
       RemoveKey(internal_node->keys_, index - 1, internal_node->header.count_nodes);
       RemoveChild(internal_node->children_offset, index, internal_node->header.count_nodes + 1);
       --internal_node->header.count_nodes;
@@ -696,7 +768,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
 }
 
 template<class T, class Key, int degree, class Compare,class Compare_>
-bool BPlusTree<T, Key, degree, Compare, Compare_>::Remove(const Key &key) {
+bool BPlusTree<T, Key, degree, Compare, Compare_>::Remove(const Key &key,const T& value) {
   NodeHeader *cur = new NodeHeader(*(this->node_header_root_));
   InternalNode *cur_internal_node = new InternalNode();
   while (!cur->is_leaf) {
@@ -712,7 +784,8 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Remove(const Key &key) {
   LeafNode *cur_leaf_node = new LeafNode();
   ReadLeafNode(file_, cur_leaf_node, cur->offset);
   bool found = false;
-  int index = Lower_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes,found);
+  int index = GetIndexOfValue(value,key,cur_leaf_node,found);
+  //int index = Lower_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes,found);
   if (found) {
     RemoveKey(cur_leaf_node->keys_, index, cur_leaf_node->header.count_nodes);
     RemoveValue(cur_leaf_node->values_, index, cur_leaf_node->header.count_nodes);
@@ -738,7 +811,7 @@ BPlusTree<T, Key, degree, Compare, Compare_>::~BPlusTree() {
 }
 
 template<class T, class Key, int degree, class Compare,class Compare_>
-T BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &key,bool & find) {
+std::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &key,bool & find) {
   NodeHeader *cur = this->node_header_root_;
   InternalNode *cur_internal_node = new InternalNode();
   while (!cur->is_leaf) {
@@ -750,10 +823,24 @@ T BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &key,bool & fin
   LeafNode *cur_leaf_node = new LeafNode();
   this->ReadLeafNode(file_, cur_leaf_node, cur->offset);
   int index = Upper_Bound(key,cur_leaf_node->keys_, cur_leaf_node->header.count_nodes) - 1;
+  int pre_index = Lower_Bound(key,cur_leaf_node->keys_, cur_leaf_node->header.count_nodes, find);
+  std::vector<T> result;
+  while (find) {
+    for (int i = index; i >= pre_index; i--) {
+      result.push_back(cur_leaf_node->values_[i]);
+    }
+    if (pre_index == 0 && cur_leaf_node -> pre_node_offset != -1) {
+      ReadLeafNode(file_, cur_leaf_node, cur_leaf_node->pre_node_offset);
+      index = Upper_Bound(key,cur_leaf_node->keys_, cur_leaf_node->header.count_nodes) - 1;
+      pre_index = Lower_Bound(key,cur_leaf_node->keys_, cur_leaf_node->header.count_nodes, find);
+    }
+    else {
+      break;
+    }
+  }
   ReadNodeHeader(file_,this->node_header_root_,this->file_header_->root_offset);
-  T tmp = cur_leaf_node->values_[index] ;
   delete cur_leaf_node;
-  return tmp;
+  return result;
 }
 
 template<class T, class Key, int degree, class Compare,class Compare_>

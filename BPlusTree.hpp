@@ -138,14 +138,33 @@ private:
    */
   int Lower_Bound(const Key & key,const Key * key_values, const int size,bool & find) const;
 
-  int upper_bound(const T & value,const T * T_values, const int size,bool & find ) const;
-  //从文件中读入文件头
-  void ReadFileHeader(std::fstream & file,FileHeader * & file_header) ;
+  int upper_bound(const T & value,const T * T_values, const int size) const;
 
-  void ReadNodeHeader(std::fstream & file,NodeHeader * & node_header,long long pos) ;
+  int lower_bound(const T & value,const T * T_values, const int size,bool & find ) const;
 
   /**
-   * 
+   * 用于Remove中寻找对应value的位置并修改传入指针的内容，确保其指向真正删除的位置
+   * @param value 要删除的值
+   * @param key 用于寻找上一个块
+   * @param leaf_node 叶指针
+   * @param find 是否找到对应位置
+   * @return 返回对应的index
+   */
+  int GetIndexOfValue(const T & value,const Key & key,LeafNode * leaf_node,bool & find);
+
+  /**
+   * 找到该节点在父节点中的位置
+   * @param offset
+   * @param internal_node
+   * @param key
+   * @return
+   */
+  int GetIndexOfOffset(long long & offset,InternalNode * internal_node,Key & key);
+
+  void ReadNodeHeader(std::fstream &file, NodeHeader *&node_header, long long pos);
+
+  void ReadFileHeader(std::fstream &file, FileHeader *&file_header);
+   /**
    * @param file 
    * @param internal_node 
    * @param pos 
@@ -168,6 +187,13 @@ private:
    */
   long long WriteFileHeader(std::fstream & file,FileHeader * & file_header);
 
+  /**
+   *
+   * @param file
+   * @param node_header
+   * @param pos
+   * @return
+   */
   long long WriteNodeHeader(std::fstream & file,NodeHeader * & node_header,long long pos);
   /**
    * 在每次写入前，请确认是否同步了 header指针和internal 里面的值，虽然本质上他们是一个东西
@@ -225,9 +251,9 @@ public:
 
   bool Insert(const Key & key, const T & value);
 
-  bool Remove(const Key & key);
+  bool Remove(const Key & key,const T & value);
 
-  T Search(const Key & key,bool & find);
+  std::vector<T> Search(const Key & key,bool & find);
 };
 
 #include "BPlusTree.tcc"
