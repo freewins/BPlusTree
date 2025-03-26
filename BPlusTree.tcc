@@ -708,7 +708,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
       //用右节点来找，避免左节点为空的时候找到的位置出现错误
       int index = GetIndexOfOffset(leaf_node->header.offset,internal_node,leaf_node->keys_[0]);
       //int index = Upper_Bound(right_node->keys_[0], internal_node->keys_, internal_node->header.count_nodes);
-      internal_node->keys_[index - 1] = right_node->keys_[1];
+      internal_node->keys_[index] = right_node->keys_[1];
 
       WriteInternalNode(file_, internal_node, internal_node->header.offset);
       delete internal_node;
