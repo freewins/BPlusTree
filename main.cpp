@@ -2,8 +2,13 @@
 #include <cstring>
 #include "BPlusTree.hpp"
 
+void print_(std::vector<int> & res) {
+  for (auto t = res.rbegin(); t != res.rend(); t++) {
+    std::cout << *t << " ";
+  }
+  std::cout<<"\n";
+}
 int main() {
-  //freopen("output.txt", "w", stdout);
   struct Key {
     char key_[66] = {};
     Key() {
@@ -17,14 +22,14 @@ int main() {
       return strcmp(key_, other.key_) < 0;
     }
   };
-  BPlusTree<int,Key,600> tree("total.data");
+  BPlusTree<int,Key,600> tree("2.data");
   std::string op;
   char key[66];
   Key t;
-  int res = 0;
+  std::vector<int> res;
   int n,tmp;
   std::cin >> n;
-  while (n--) {
+  for (int i = 1; i<= n; i++) {
     std::cin >> op;
     if (op == "insert") {
       std::cin >> key;
@@ -41,12 +46,9 @@ int main() {
     else if (op == "find") {
       std::cin >> key;
       bool find = false;
-      std::vector<int> res = tree.Search(Key(key), find);
+      res = tree.Search(Key(key), find);
       if (find) {
-        for (auto t = res.rbegin(); t != res.rend(); t++) {
-          std::cout << *t << " ";
-        }
-        std::cout<<"\n";
+        print_(res);
       }
       else {
         std::cout << "null\n";

@@ -209,19 +209,18 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Insert(const Key &key, const 
   this->ReadLeafNode(file_, cur_leaf_node, cur->offset);
   bool found = false;
   int index = GetIndexOfValue(value,key,cur_leaf_node,found);
-  // int index_next = Upper_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes);
-  // int index_pre = Lower_Bound(key,cur_leaf_node->keys_, cur_leaf_node->header.count_nodes,found);
-  // int index = upper_bound(value,cur_leaf_node->values_ + index_pre,index_next - index_pre) + index_pre;
-  InsertKey(key, cur_leaf_node->keys_, index, cur_leaf_node->header.count_nodes);
-  InsertValue(value, cur_leaf_node->values_, index, cur_leaf_node->header.count_nodes);
-  ++cur_leaf_node->header.count_nodes;
-  ++this->file_header_->node_count; //TODO is necessary???
-  //一个重要的Bug 修正
-  //最开始我是在Split后才进行写入，但是这会导致一个问题，Split中在修正父节点的时候，直接对外存进行操作，修改其父节点
-  //但是内存中的父节点并没有被修改，所以Split后写入会导致父节点修改失效，存储失败
-  //这句话不要删，虽然Split里面有写入函数，但是进行Split 的概率很低
-  WriteLeafNode(file_, cur_leaf_node, cur_leaf_node->header.offset);
-  Split(file_, cur_leaf_node);
+  if (!found) {
+    InsertKey(key, cur_leaf_node->keys_, index, cur_leaf_node->header.count_nodes);
+    InsertValue(value, cur_leaf_node->values_, index, cur_leaf_node->header.count_nodes);
+    ++cur_leaf_node->header.count_nodes;
+    ++this->file_header_->node_count; //TODO is necessary???
+    //一个重要的Bug 修正
+    //最开始我是在Split后才进行写入，但是这会导致一个问题，Split中在修正父节点的时候，直接对外存进行操作，修改其父节点
+    //但是内存中的父节点并没有被修改，所以Split后写入会导致父节点修改失效，存储失败
+    //这句话不要删，虽然Split里面有写入函数，但是进行Split 的概率很低
+    WriteLeafNode(file_, cur_leaf_node, cur_leaf_node->header.offset);
+    Split(file_, cur_leaf_node);
+  }
   if (this->file_header_->root_offset != this ->node_header_root_->offset) {
     this->ReadNodeHeader(file_, this->node_header_root_, this->file_header_->root_offset);
   }
@@ -456,7 +455,7 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfValue(const T &value
       ReadLeafNode(file_,leaf_node,leaf_node->pre_node_offset);
       key_index = Lower_Bound(key,leaf_node->keys_,leaf_node->header.count_nodes,find_key);
       if (find_key) {
-        pre_index = lower_bound(value,leaf_node->values_ + key_index,leaf_node->header.count_nodes - key_index,find);
+        pre_index = lower_bound(value,leaf_node->values_ + key_index,leaf_node->header.count_nodes - key_index,find) + key_index;
       }
       else {
         break;
