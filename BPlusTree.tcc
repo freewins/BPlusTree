@@ -509,7 +509,6 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::CheckMerge(NodeHeader *cur_no
 template<class T, class Key, int degree, class Compare,class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, InternalNode *internal_node) {
   if (CheckMerge((&internal_node->header))) {
-    //TODO 必须要写的是进行merge时修改父节点.
     if (internal_node->header.father_offset != -1) {
       //外部new就在外部统一delete
       InternalNode *father_node = new InternalNode();
@@ -644,7 +643,8 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
       delete change_cur;
       return;
     }
-  } else {
+  }
+  else {
     return;
   }
 }
@@ -679,8 +679,10 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
       //更新父节点 如果根为叶不会进行merge
       InternalNode *internal_node = new InternalNode();
       ReadInternalNode(file_, internal_node, leaf_node->header.father_offset);
-      int index = Upper_Bound(left_node->keys_[left_node->header.count_nodes - 1], internal_node->keys_,
-                              internal_node->header.count_nodes);
+      //必须找左节点的位置
+      //TODO 先设为0 因为肯定寻找的是大于的位置
+      int index = GetIndexOfOffset(left_node->header.offset,internal_node,left_node->keys_[0]);
+      //int index = Upper_Bound(left_node->keys_[left_node->header.count_nodes - 1], internal_node->keys_,internal_node->header.count_nodes);
 
       internal_node->keys_[index] = left_node->keys_[left_node->header.count_nodes - 1];
 
@@ -704,7 +706,8 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
       InternalNode *internal_node = new InternalNode();
       ReadInternalNode(file_, internal_node, leaf_node->header.father_offset);
       //用右节点来找，避免左节点为空的时候找到的位置出现错误
-      int index = Upper_Bound(right_node->keys_[0], internal_node->keys_, internal_node->header.count_nodes);
+      int index = GetIndexOfOffset(leaf_node->header.offset,internal_node,leaf_node->keys_[0]);
+      //int index = Upper_Bound(right_node->keys_[0], internal_node->keys_, internal_node->header.count_nodes);
       internal_node->keys_[index - 1] = right_node->keys_[1];
 
       WriteInternalNode(file_, internal_node, internal_node->header.offset);
