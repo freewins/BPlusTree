@@ -125,50 +125,49 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::InsertChild(long long pos, lo
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::
-ReadFileHeader(std::fstream &file, FileHeader *&file_header) {
-  if (file.fail()) {
+ReadFileHeader(FileHeader *&file_header) {
+  if (file_.fail()) {
     return;
   }
-  file.seekg(0, std::ios::beg);
-  file.read(reinterpret_cast<char *>(file_header), sizeof(FileHeader));
+  file_.seekg(0, std::ios::beg);
+  file_.read(reinterpret_cast<char *>(file_header), sizeof(FileHeader));
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::
-ReadNodeHeader(std::fstream &file, NodeHeader *&node_header, long long pos) {
-  if (file.fail()) {
+ReadNodeHeader(NodeHeader *&node_header, long long pos) {
+  if (file_.fail()) {
     return;
   }
-  file.seekg(pos, std::ios::beg);
-  file.read(reinterpret_cast<char *>(node_header), sizeof(NodeHeader));
+  file_.seekg(pos, std::ios::beg);
+  file_.read(reinterpret_cast<char *>(node_header), sizeof(NodeHeader));
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare,
-  Compare_>::ReadLeafNode(std::fstream &file, LeafNode *&leaf_node, long long pos) {
-  if (file.fail()) {
+  Compare_>::ReadLeafNode(LeafNode *&leaf_node, long long pos) {
+  if (file_.fail()) {
     return;
   }
-  file.seekg(pos, std::ios::beg);
-  file.read(reinterpret_cast<char *>(leaf_node), sizeof(LeafNode));
+  file_.seekg(pos, std::ios::beg);
+  file_.read(reinterpret_cast<char *>(leaf_node), sizeof(LeafNode));
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-void BPlusTree<T, Key, degree, Compare, Compare_>::ReadInternalNode(std::fstream &file, InternalNode *&internal_node,
+void BPlusTree<T, Key, degree, Compare, Compare_>::ReadInternalNode(InternalNode *&internal_node,
                                                                     long long pos) {
-  if (file.fail()) {
+  if (file_.fail()) {
     return;
   }
-  file.seekg(pos, std::ios::beg);
-  file.read(reinterpret_cast<char *>(internal_node), sizeof(InternalNode));
+  file_.seekg(pos, std::ios::beg);
+  file_.read(reinterpret_cast<char *>(internal_node), sizeof(InternalNode));
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteInternalNode(
-  std::fstream &file, InternalNode *&internal_node,
+long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteInternalNode( InternalNode *&internal_node,
   long long pos) {
-  file.seekp(pos, std::ios::beg);
-  file.write(reinterpret_cast<char *>(internal_node), sizeof(InternalNode));
+  file_.seekp(pos, std::ios::beg);
+  file_.write(reinterpret_cast<char *>(internal_node), sizeof(InternalNode));
   return file_.tellp();
 }
 
@@ -186,11 +185,11 @@ BPlusTree<T, Key, degree, Compare, Compare_>::BPlusTree(const std::string &path)
     this->file_header_->root_offset = this->node_header_root_->offset;
     LeafNode *new_leaf_node = new LeafNode();
     new_leaf_node->header = *(this->node_header_root_);
-    WriteLeafNode(file_, new_leaf_node, node_header_root_->offset);
+    WriteLeafNode(new_leaf_node, node_header_root_->offset);
     delete new_leaf_node;
   } else {
-    this->ReadFileHeader(file_, file_header_);
-    this->ReadNodeHeader(file_, node_header_root_, file_header_->root_offset);
+    this->ReadFileHeader(file_header_);
+    this->ReadNodeHeader(node_header_root_, file_header_->root_offset);
   }
 }
 
@@ -203,18 +202,18 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Insert(const Key &key, const 
   NodeHeader *cur = new NodeHeader(*(this->node_header_root_));
   InternalNode *cur_internal_node = new InternalNode();
   while (!cur->is_leaf) {
-    this->ReadInternalNode(file_, cur_internal_node, cur->offset);
+    this->ReadInternalNode(cur_internal_node, cur->offset);
     //找到大于它的最大值
     int index = Upper_Bound(key, cur_internal_node->keys_, cur_internal_node->header.count_nodes);
     // |0| |1| |2| |3| |4|
     // |   |   |   |   |   \
     // |0| |1| |2| |3| |4|  |5|
-    this->ReadNodeHeader(file_, cur, cur_internal_node->children_offset[index]);
+    this->ReadNodeHeader(cur, cur_internal_node->children_offset[index]);
   }
   delete cur_internal_node;
   //到达叶节点
   LeafNode *cur_leaf_node = new LeafNode();
-  this->ReadLeafNode(file_, cur_leaf_node, cur->offset);
+  this->ReadLeafNode(cur_leaf_node, cur->offset);
   bool found = false;
   int index = GetIndexOfValue(value, key, cur_leaf_node, found);
   if (!found) {
@@ -226,11 +225,11 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Insert(const Key &key, const 
     //最开始我是在Split后才进行写入，但是这会导致一个问题，Split中在修正父节点的时候，直接对外存进行操作，修改其父节点
     //但是内存中的父节点并没有被修改，所以Split后写入会导致父节点修改失效，存储失败
     //这句话不要删，虽然Split里面有写入函数，但是进行Split 的概率很低
-    WriteLeafNode(file_, cur_leaf_node, cur_leaf_node->header.offset);
-    Split(file_, cur_leaf_node);
+    WriteLeafNode(cur_leaf_node, cur_leaf_node->header.offset);
+    Split(cur_leaf_node);
   }
   if (this->file_header_->root_offset != this->node_header_root_->offset) {
-    this->ReadNodeHeader(file_, this->node_header_root_, this->file_header_->root_offset);
+    this->ReadNodeHeader(this->node_header_root_, this->file_header_->root_offset);
   }
   delete cur_leaf_node;
   delete cur;
@@ -238,7 +237,7 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Insert(const Key &key, const 
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, LeafNode *&leaf_node) {
+void BPlusTree<T, Key, degree, Compare, Compare_>::Split( LeafNode *&leaf_node) {
   if (leaf_node->header.count_nodes < degree) {
     return;
   }
@@ -252,7 +251,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Lea
   // |1| |2| |3| |4|  |1| |5| |2| |3| |4|
 
   if (leaf_node->header.father_offset != -1) {
-    ReadInternalNode(file_, cur_internal_node, leaf_node->header.father_offset);
+    ReadInternalNode( cur_internal_node, leaf_node->header.father_offset);
     bool find_ = false;
     index = GetIndexOfOffset(leaf_node->header.offset, cur_internal_node, leaf_node->keys_[change_pos]);
     // if (find_) {
@@ -270,9 +269,9 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Lea
     cur_internal_node->children_offset[0] = leaf_node->header.offset;
     index = 0;
     //这一步是必须要有，不然后面的新节点找不到文件末尾
-    WriteInternalNode(file_, cur_internal_node, cur_internal_node->header.offset);
+    WriteInternalNode( cur_internal_node, cur_internal_node->header.offset);
     this->file_header_->root_offset = cur_internal_node->header.offset;
-    //ReadNodeHeader(file_,this->node_header_root_,this->file_header_->root_offset);
+    //ReadNodeHeader(this->node_header_root_,this->file_header_->root_offset);
   }
   LeafNode *new_leaf_node = new LeafNode();
   //初始化新叶子节点
@@ -291,9 +290,9 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Lea
   new_leaf_node->pre_node_offset = leaf_node->header.offset;
   if (new_leaf_node->next_node_offset != -1) {
     LeafNode *next_leaf_node = new LeafNode();
-    ReadLeafNode(file_, next_leaf_node, new_leaf_node->next_node_offset);
+    ReadLeafNode( next_leaf_node, new_leaf_node->next_node_offset);
     next_leaf_node->pre_node_offset = new_leaf_node->header.offset;
-    WriteLeafNode(file_, next_leaf_node, next_leaf_node->header.offset);
+    WriteLeafNode( next_leaf_node, next_leaf_node->header.offset);
     delete next_leaf_node;
   }
   leaf_node->next_node_offset = new_leaf_node->header.offset;
@@ -303,16 +302,16 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Lea
               cur_internal_node->header.count_nodes + 1);
   ++cur_internal_node->header.count_nodes;
   //
-  WriteLeafNode(file_, new_leaf_node, new_leaf_node->header.offset);
-  WriteLeafNode(file_, leaf_node, leaf_node->header.offset);
+  WriteLeafNode( new_leaf_node, new_leaf_node->header.offset);
+  WriteLeafNode( leaf_node, leaf_node->header.offset);
   delete new_leaf_node;
-  WriteInternalNode(file_, cur_internal_node, cur_internal_node->header.offset);
-  Split(file_, cur_internal_node);
+  WriteInternalNode( cur_internal_node, cur_internal_node->header.offset);
+  Split( cur_internal_node);
   delete cur_internal_node;
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, InternalNode *internal_node) {
+void BPlusTree<T, Key, degree, Compare, Compare_>::Split(InternalNode *internal_node) {
   if (internal_node->header.count_nodes < degree) {
     return;
   }
@@ -320,7 +319,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Int
   int index = 0;
   int change_pos = (internal_node->header.count_nodes / 2);
   if (internal_node->header.father_offset != -1) {
-    ReadInternalNode(file_, father_internal_node, internal_node->header.father_offset);
+    ReadInternalNode( father_internal_node, internal_node->header.father_offset);
     index = GetIndexOfOffset(internal_node->header.offset, father_internal_node, internal_node->keys_[change_pos]);
     //Upper_Bound(internal_node->keys_[change_pos], father_internal_node->keys_,father_internal_node->header.count_nodes);
     InsertKey(internal_node->keys_[change_pos], father_internal_node->keys_, index,
@@ -333,7 +332,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Int
     this->file_header_->root_offset = father_internal_node->header.offset;
     father_internal_node->keys_[0] = internal_node->keys_[change_pos];
     father_internal_node->children_offset[0] = internal_node->header.offset;
-    WriteInternalNode(file_, father_internal_node, father_internal_node->header.offset);
+    WriteInternalNode( father_internal_node, father_internal_node->header.offset);
     index = 0;
   }
   //创建新节点，并更新key和child
@@ -355,16 +354,16 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(std::fstream &file, Int
   //修改初始节点
   internal_node->header.count_nodes = change_pos;
   internal_node->header.father_offset = father_internal_node->header.offset;
-  WriteInternalNode(file_, new_internal_node, new_internal_node->header.offset);
-  WriteInternalNode(file_, internal_node, internal_node->header.offset);
+  WriteInternalNode( new_internal_node, new_internal_node->header.offset);
+  WriteInternalNode( internal_node, internal_node->header.offset);
   //插入内部节点的child要在index+1的位置插入
   InsertChild(new_internal_node->header.offset, father_internal_node->children_offset, index + 1,
               father_internal_node->header.count_nodes + 1);
   ++father_internal_node->header.count_nodes;
   //写入
-  WriteInternalNode(file_, father_internal_node, father_internal_node->header.offset);
+  WriteInternalNode( father_internal_node, father_internal_node->header.offset);
   delete new_internal_node;
-  Split(file_, father_internal_node);
+  Split( father_internal_node);
   delete father_internal_node;
   return;
 }
@@ -421,27 +420,27 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::RemoveValue(T *values_, const
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteNodeHeader(std::fstream &file, NodeHeader *&node_header,
+long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteNodeHeader(NodeHeader *&node_header,
                                                                         long long pos) {
-  file.seekg(pos, std::ios::beg);
-  file.write(reinterpret_cast<char *>(node_header), sizeof(NodeHeader));
-  return file.tellp();
+  file_.seekg(pos, std::ios::beg);
+  file_.write(reinterpret_cast<char *>(node_header), sizeof(NodeHeader));
+  return file_.tellp();
 }
 
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteFileHeader(std::fstream &file, FileHeader *&file_header) {
+long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteFileHeader(FileHeader *&file_header) {
   file_.seekp(0, std::ios::beg);
-  file.write(reinterpret_cast<char *>(file_header_), sizeof(FileHeader));
-  return file.tellp();
+  file_.write(reinterpret_cast<char *>(file_header_), sizeof(FileHeader));
+  return file_.tellp();
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteLeafNode(std::fstream &file, LeafNode *&leaf_node,
+long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteLeafNode(LeafNode *&leaf_node,
                                                                       long long pos) {
-  file.seekp(pos, std::ios::beg);
-  file.write(reinterpret_cast<char *>(leaf_node), sizeof(LeafNode));
-  return file.tellp();
+  file_.seekp(pos, std::ios::beg);
+  file_.write(reinterpret_cast<char *>(leaf_node), sizeof(LeafNode));
+  return file_.tellp();
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
@@ -463,14 +462,14 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfValue(const T &value
       break;
     } else {
       //pre_index == 0 默认成立
-      ReadLeafNode(file_, leaf_node, leaf_node->pre_node_offset);
+      ReadLeafNode( leaf_node, leaf_node->pre_node_offset);
       key_index = Lower_Bound(key, leaf_node->keys_, leaf_node->header.count_nodes, find_key);
       if (find_key) {
         pre_index = lower_bound(value, leaf_node->values_ + key_index, leaf_node->header.count_nodes - key_index,
                                 find) + key_index;
       } else {
         //这里没有找到对应值，说明这里不存在key,而此时pre_index = 0 插入位置错误
-        ReadLeafNode(file_,leaf_node,leaf_node->next_node_offset);
+        ReadLeafNode(leaf_node,leaf_node->next_node_offset);
         break;
       }
     }
@@ -518,12 +517,12 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::CheckMerge(NodeHeader *cur_no
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, InternalNode *internal_node) {
+void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(InternalNode *internal_node) {
   if (CheckMerge((&internal_node->header))) {
     if (internal_node->header.father_offset != -1) {
       //外部new就在外部统一delete
       InternalNode *father_node = new InternalNode();
-      ReadInternalNode(file, father_node, internal_node->header.father_offset);
+      ReadInternalNode(father_node, internal_node->header.father_offset);
       NodeHeader *left_cur = new NodeHeader();
       NodeHeader *right_cur = new NodeHeader();
       bool right_ = false, left_ = false;
@@ -533,11 +532,11 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
       if (index > 0) {
         //有左兄弟
         left_ = true;
-        ReadNodeHeader(file_, left_cur, father_node->children_offset[index - 1]);
+        ReadNodeHeader( left_cur, father_node->children_offset[index - 1]);
       } else if (index < father_node->header.count_nodes) {
         //有右兄弟
         right_ = true;
-        ReadNodeHeader(file_, right_cur, father_node->children_offset[index + 1]);
+        ReadNodeHeader( right_cur, father_node->children_offset[index + 1]);
       } else {
         //只剩自己一个节点
         //RE
@@ -546,7 +545,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
         //从左兄借节点
         //1 向自己头部插入左兄弟最后的节点和child
         InternalNode *left_node = new InternalNode();
-        ReadInternalNode(file, left_node, left_cur->offset);
+        ReadInternalNode(left_node, left_cur->offset);
         //插入父亲的key 兄弟的child
         //要-1 因为是自己的upperbound
         InsertKey(father_node->keys_[index - 1], internal_node->keys_, 0, internal_node->header.count_nodes);
@@ -554,24 +553,24 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
                     internal_node->header.count_nodes + 1);
         //左节点插入的位置的父节点进行修改
         NodeHeader *change_cur = new NodeHeader();
-        ReadNodeHeader(file_, change_cur, internal_node->children_offset[0]);
+        ReadNodeHeader( change_cur, internal_node->children_offset[0]);
         change_cur->father_offset = internal_node->header.offset;
 
-        WriteNodeHeader(file_, change_cur, change_cur->offset);
+        WriteNodeHeader( change_cur, change_cur->offset);
         delete change_cur;
 
         father_node->keys_[index - 1] = left_node->keys_[left_cur->count_nodes - 1];
         --left_node->header.count_nodes;
         ++internal_node->header.count_nodes;
-        WriteInternalNode(file_, left_node, left_node->header.offset);
-        WriteInternalNode(file_, internal_node, internal_node->header.offset);
+        WriteInternalNode( left_node, left_node->header.offset);
+        WriteInternalNode( internal_node, internal_node->header.offset);
         delete left_node;
-        WriteInternalNode(file_, father_node, father_node->header.offset);
+        WriteInternalNode( father_node, father_node->header.offset);
       } else if (right_ && right_cur->count_nodes >= LIMIT) {
         //从右兄弟借节点
         //1 向自己尾部插入父亲第一个节点和child
         InternalNode *right_node = new InternalNode();
-        ReadInternalNode(file_, right_node, right_cur->offset);
+        ReadInternalNode( right_node, right_cur->offset);
         //父亲的key 插入到自己的尾部 这里不用-1
         InsertKey(father_node->keys_[index], internal_node->keys_, internal_node->header.count_nodes,
                   internal_node->header.count_nodes);
@@ -579,9 +578,9 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
                     internal_node->header.count_nodes + 1, internal_node->header.count_nodes + 1);
         //右节点插入的孩子的父节点进行修改
         NodeHeader *change_cur = new NodeHeader();
-        ReadNodeHeader(file_, change_cur, internal_node->children_offset[internal_node->header.count_nodes + 1]);
+        ReadNodeHeader( change_cur, internal_node->children_offset[internal_node->header.count_nodes + 1]);
         change_cur->father_offset = internal_node->header.offset;
-        WriteNodeHeader(file_, change_cur, change_cur->offset);
+        WriteNodeHeader( change_cur, change_cur->offset);
         delete change_cur;
 
         father_node->keys_[index] = right_node->keys_[0];
@@ -589,10 +588,10 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
         RemoveKey(right_node->keys_, 0, right_node->header.count_nodes);
         --right_node->header.count_nodes;
         ++internal_node->header.count_nodes;
-        WriteInternalNode(file_, right_node, right_node->header.offset);
-        WriteInternalNode(file_, internal_node, internal_node->header.offset);
+        WriteInternalNode( right_node, right_node->header.offset);
+        WriteInternalNode( internal_node, internal_node->header.offset);
         delete right_node;
-        WriteInternalNode(file_, father_node, father_node->header.offset);
+        WriteInternalNode( father_node, father_node->header.offset);
       } else {
         //只能合并
         InternalNode *left_node, *right_node;
@@ -601,12 +600,12 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
           right_node = internal_node;
           left_node = new InternalNode();
           --index;
-          ReadInternalNode(file_, left_node, father_node->children_offset[index]);
+          ReadInternalNode( left_node, father_node->children_offset[index]);
         } else if (right_) {
           //自己是左节点
           left_node = internal_node;
           right_node = new InternalNode();
-          ReadInternalNode(file_, right_node, father_node->children_offset[index + 1]);
+          ReadInternalNode( right_node, father_node->children_offset[index + 1]);
         } else {
           //re
         }
@@ -628,16 +627,16 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
         right_node->header.count_nodes = 0;
         right_node->header.father_offset = -1;
         //写入父节点和左节点右节点
-        WriteInternalNode(file_, father_node, father_node->header.offset);
-        WriteInternalNode(file_, left_node, left_node->header.offset);
-        WriteInternalNode(file_, right_node, right_node->header.offset);
+        WriteInternalNode( father_node, father_node->header.offset);
+        WriteInternalNode( left_node, left_node->header.offset);
+        WriteInternalNode( right_node, right_node->header.offset);
         if (left_) {
           delete left_node;
         } else {
           delete right_node;
         }
         //进行父节点的检测
-        Merge(file_, father_node);
+        Merge( father_node);
       }
       delete father_node;
       delete left_cur;
@@ -647,9 +646,9 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
       //步骤:把根节点指向子节点
       this->file_header_->root_offset = internal_node->children_offset[0];
       NodeHeader *change_cur = new NodeHeader();
-      ReadNodeHeader(file_, change_cur, internal_node->children_offset[0]);
+      ReadNodeHeader( change_cur, internal_node->children_offset[0]);
       change_cur->father_offset = -1;
-      WriteNodeHeader(file_, change_cur, change_cur->offset);
+      WriteNodeHeader( change_cur, change_cur->offset);
       delete change_cur;
       return;
     }
@@ -659,20 +658,20 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Int
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, LeafNode *&leaf_node) {
+void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(LeafNode *&leaf_node) {
   if (CheckMerge(&(leaf_node->header))) {
     bool left_, right_;
     left_ = right_ = false;
     NodeHeader *left_cur = new NodeHeader();
     NodeHeader *right_cur = new NodeHeader();
     if (leaf_node->pre_node_offset != -1) {
-      ReadNodeHeader(file_, left_cur, leaf_node->pre_node_offset);
+      ReadNodeHeader( left_cur, leaf_node->pre_node_offset);
       if (left_cur->father_offset == leaf_node->header.father_offset) {
         left_ = true;
       }
     }
     if (leaf_node->next_node_offset != -1) {
-      ReadNodeHeader(file_, right_cur, leaf_node->next_node_offset);
+      ReadNodeHeader( right_cur, leaf_node->next_node_offset);
       if (right_cur->father_offset == leaf_node->header.father_offset) {
         right_ = true;
       }
@@ -680,7 +679,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
     if (left_ && left_cur->count_nodes >= LIMIT) {
       //优先左
       LeafNode *left_node = new LeafNode(); //左兄弟的叶节点
-      ReadLeafNode(file_, left_node, left_cur->offset);
+      ReadLeafNode( left_node, left_cur->offset);
       //左节点最大插入到内部最小
       InsertKey(left_node->keys_[left_node->header.count_nodes - 1], leaf_node->keys_, 0,
                 leaf_node->header.count_nodes);
@@ -688,7 +687,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
                   leaf_node->header.count_nodes);
       //更新父节点 如果根为叶不会进行merge
       InternalNode *internal_node = new InternalNode();
-      ReadInternalNode(file_, internal_node, leaf_node->header.father_offset);
+      ReadInternalNode( internal_node, leaf_node->header.father_offset);
       //必须找左节点的位置
       //TODO 先设为0 因为肯定寻找的是大于的位置
       int index = GetIndexOfOffset(left_node->header.offset, internal_node, left_node->keys_[0]);
@@ -696,39 +695,39 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
 
       internal_node->keys_[index] = left_node->keys_[left_node->header.count_nodes - 1];
 
-      WriteInternalNode(file_, internal_node, internal_node->header.offset);
+      WriteInternalNode( internal_node, internal_node->header.offset);
       delete internal_node;
       RemoveKey(left_node->keys_, left_node->header.count_nodes - 1, left_node->header.count_nodes);
       RemoveValue(left_node->values_, left_node->header.count_nodes - 1, left_node->header.count_nodes);
       --left_node->header.count_nodes;
       ++leaf_node->header.count_nodes;
-      WriteLeafNode(file_, left_node, left_node->header.offset);
-      WriteLeafNode(file_, leaf_node, leaf_node->header.offset);
+      WriteLeafNode( left_node, left_node->header.offset);
+      WriteLeafNode( leaf_node, leaf_node->header.offset);
       delete left_node;
     } else if (right_ && right_cur->count_nodes >= LIMIT) {
       LeafNode *right_node = new LeafNode(); //右兄弟的叶节点
-      ReadLeafNode(file_, right_node, right_cur->offset);
+      ReadLeafNode( right_node, right_cur->offset);
       //右节点最小插入到尾部
       InsertKey(right_node->keys_[0], leaf_node->keys_, leaf_node->header.count_nodes, leaf_node->header.count_nodes);
       InsertValue(right_node->values_[0], leaf_node->values_, leaf_node->header.count_nodes,
                   leaf_node->header.count_nodes);
       //更新父节点
       InternalNode *internal_node = new InternalNode();
-      ReadInternalNode(file_, internal_node, leaf_node->header.father_offset);
+      ReadInternalNode( internal_node, leaf_node->header.father_offset);
       //用右节点来找，避免左节点为空的时候找到的位置出现错误
       int index = GetIndexOfOffset(leaf_node->header.offset, internal_node, leaf_node->keys_[0]);
       //int index = Upper_Bound(right_node->keys_[0], internal_node->keys_, internal_node->header.count_nodes);
       internal_node->keys_[index] = right_node->keys_[1];
 
-      WriteInternalNode(file_, internal_node, internal_node->header.offset);
+      WriteInternalNode( internal_node, internal_node->header.offset);
       delete internal_node;
 
       RemoveKey(right_node->keys_, 0, right_node->header.count_nodes);
       RemoveValue(right_node->values_, 0, right_node->header.count_nodes);
       --right_node->header.count_nodes;
       ++leaf_node->header.count_nodes;
-      WriteLeafNode(file_, right_node, right_node->header.offset);
-      WriteLeafNode(file_, leaf_node, leaf_node->header.offset);
+      WriteLeafNode( right_node, right_node->header.offset);
+      WriteLeafNode( leaf_node, leaf_node->header.offset);
       delete right_node;
     } else {
       //进行合并向左
@@ -736,11 +735,11 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
       if (left_) {
         left_node = new LeafNode();
         right_node = leaf_node;
-        ReadLeafNode(file_, left_node, left_cur->offset);
+        ReadLeafNode( left_node, left_cur->offset);
       } else if (right_) {
         left_node = leaf_node;
         right_node = new LeafNode();
-        ReadLeafNode(file_, right_node, right_cur->offset);
+        ReadLeafNode( right_node, right_cur->offset);
       } else {
         //RE
         throw std::invalid_argument("Invalid node type");
@@ -755,23 +754,23 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
       right_node->next_node_offset = right_node->pre_node_offset = -1;
       right_node->header.count_nodes = 0;
       InternalNode *internal_node = new InternalNode();
-      ReadInternalNode(file_, internal_node, right_node->header.father_offset);
+      ReadInternalNode( internal_node, right_node->header.father_offset);
       //find 是用来寻找下界，以为了确保找到正确的位置
       int index = GetIndexOfOffset(right_node->header.offset, internal_node, right_node->keys_[0]);
       //
       RemoveKey(internal_node->keys_, index - 1, internal_node->header.count_nodes);
       RemoveChild(internal_node->children_offset, index, internal_node->header.count_nodes + 1);
       --internal_node->header.count_nodes;
-      WriteInternalNode(file_, internal_node, internal_node->header.offset);
+      WriteInternalNode( internal_node, internal_node->header.offset);
       if (left_node->next_node_offset != -1) {
         LeafNode *next_node = new LeafNode();
-        ReadLeafNode(file_, next_node, left_node->next_node_offset);
+        ReadLeafNode( next_node, left_node->next_node_offset);
         next_node->pre_node_offset = left_node->header.offset;
-        WriteLeafNode(file_, next_node, next_node->header.offset);
+        WriteLeafNode( next_node, next_node->header.offset);
         delete next_node;
       }
-      WriteLeafNode(file_, left_node, left_node->header.offset);
-      WriteLeafNode(file_, right_node, right_node->header.offset);
+      WriteLeafNode( left_node, left_node->header.offset);
+      WriteLeafNode( right_node, right_node->header.offset);
       if (left_) {
         delete left_node;
       } else {
@@ -779,7 +778,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
       }
 
       //TODO 执行对父节点的合并
-      Merge(file_, internal_node);
+      Merge( internal_node);
       delete internal_node;
     }
     delete left_cur;
@@ -794,17 +793,17 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Remove(const Key &key, const 
   NodeHeader *cur = new NodeHeader(*(this->node_header_root_));
   InternalNode *cur_internal_node = new InternalNode();
   while (!cur->is_leaf) {
-    this->ReadInternalNode(file_, cur_internal_node, cur->offset);
+    this->ReadInternalNode(cur_internal_node, cur->offset);
     //找到大于它的最大值
     int index = Upper_Bound(key, cur_internal_node->keys_, cur_internal_node->header.count_nodes);
     // |0| |1| |2| |3| |4|
     // |   |   |   |   |   \
     // |0| |1| |2| |3| |4|  |5|
-    this->ReadNodeHeader(file_, cur, cur_internal_node->children_offset[index]);
+    this->ReadNodeHeader(cur, cur_internal_node->children_offset[index]);
   }
   delete cur_internal_node;
   LeafNode *cur_leaf_node = new LeafNode();
-  ReadLeafNode(file_, cur_leaf_node, cur->offset);
+  ReadLeafNode(cur_leaf_node, cur->offset);
   bool found = false;
   int index = GetIndexOfValue(value, key, cur_leaf_node, found);
   //int index = Lower_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes,found);
@@ -812,12 +811,12 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Remove(const Key &key, const 
     RemoveKey(cur_leaf_node->keys_, index, cur_leaf_node->header.count_nodes);
     RemoveValue(cur_leaf_node->values_, index, cur_leaf_node->header.count_nodes);
     --cur_leaf_node->header.count_nodes;
-    WriteLeafNode(file_, cur_leaf_node, cur_leaf_node->header.offset);
-    Merge(file_, cur_leaf_node);
+    WriteLeafNode(cur_leaf_node, cur_leaf_node->header.offset);
+    Merge(cur_leaf_node);
     --this->file_header_->node_count;
   }
   if (this->node_header_root_->offset != this->file_header_->root_offset) {
-    ReadNodeHeader(file_, this->node_header_root_, this->file_header_->root_offset);
+    ReadNodeHeader(this->node_header_root_, this->file_header_->root_offset);
   }
   delete cur;
   delete cur_leaf_node;
@@ -826,7 +825,7 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Remove(const Key &key, const 
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 BPlusTree<T, Key, degree, Compare, Compare_>::~BPlusTree() {
-  WriteFileHeader(file_, file_header_);
+  WriteFileHeader(file_header_);
   delete file_header_;
   delete node_header_root_;
   file_.close();
@@ -837,13 +836,13 @@ std::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &k
   NodeHeader *cur = this->node_header_root_;
   InternalNode *cur_internal_node = new InternalNode();
   while (!cur->is_leaf) {
-    ReadInternalNode(file_, cur_internal_node, cur->offset);
+    ReadInternalNode(cur_internal_node, cur->offset);
     int index = Upper_Bound(key, cur_internal_node->keys_, cur_internal_node->header.count_nodes);
-    ReadNodeHeader(file_, cur, cur_internal_node->children_offset[index]);
+    ReadNodeHeader(cur, cur_internal_node->children_offset[index]);
   }
   delete cur_internal_node;
   LeafNode *cur_leaf_node = new LeafNode();
-  this->ReadLeafNode(file_, cur_leaf_node, cur->offset);
+  this->ReadLeafNode(cur_leaf_node, cur->offset);
   int index = Upper_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes) - 1;
   int pre_index = Lower_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes, find);
   std::vector<T> result;
@@ -858,14 +857,14 @@ std::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &k
       }
     }
     if (pre_index == 0 && cur_leaf_node->pre_node_offset != -1) {
-      ReadLeafNode(file_, cur_leaf_node, cur_leaf_node->pre_node_offset);
+      ReadLeafNode( cur_leaf_node, cur_leaf_node->pre_node_offset);
       index = Upper_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes) - 1;
       pre_index = Lower_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes, continue_find);
     } else {
       break;
     }
   }
-  ReadNodeHeader(file_, this->node_header_root_, this->file_header_->root_offset);
+  ReadNodeHeader( this->node_header_root_, this->file_header_->root_offset);
   delete cur_leaf_node;
   return result;
 }
@@ -874,9 +873,9 @@ template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::ChangeFather(long long *children, int size_,long long father_offset_) {
   NodeHeader *cur = new NodeHeader();
   for (int i = 0; i < size_; i++) {
-    ReadNodeHeader(file_, cur, children[i]);
+    ReadNodeHeader( cur, children[i]);
     cur->father_offset = father_offset_;
-    WriteNodeHeader(file_, cur, children[i]);
+    WriteNodeHeader( cur, children[i]);
   }
   delete cur;
 }

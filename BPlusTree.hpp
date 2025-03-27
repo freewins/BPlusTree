@@ -162,15 +162,15 @@ private:
    */
   int GetIndexOfOffset(long long & offset,InternalNode * internal_node,Key & key);
 
-  void ReadNodeHeader(std::fstream &file, NodeHeader *&node_header, long long pos);
+  void ReadNodeHeader(NodeHeader *&node_header, long long pos);
 
-  void ReadFileHeader(std::fstream &file, FileHeader *&file_header);
+  void ReadFileHeader(FileHeader *&file_header);
    /**
    * @param file 
    * @param internal_node 
    * @param pos 
    */
-  void ReadInternalNode(std::fstream & file,InternalNode * & internal_node,long long pos) ;
+  void ReadInternalNode(InternalNode * & internal_node,long long pos) ;
 
   /**
    * 读入叶子节点
@@ -178,7 +178,7 @@ private:
    * @param leaf_node 要存入的叶节点内存
    * @param pos 读取的位置
    */
-  void ReadLeafNode(std::fstream & file,LeafNode * & leaf_node,long long pos);
+  void ReadLeafNode(LeafNode * & leaf_node,long long pos);
 
   /**
    * 写入文件头
@@ -186,7 +186,7 @@ private:
    * @param file_header 文件头指针
    * @return 返回插入指针位置
    */
-  long long WriteFileHeader(std::fstream & file,FileHeader * & file_header);
+  long long WriteFileHeader(FileHeader * & file_header);
 
   /**
    *
@@ -195,7 +195,7 @@ private:
    * @param pos
    * @return
    */
-  long long WriteNodeHeader(std::fstream & file,NodeHeader * & node_header,long long pos);
+  long long WriteNodeHeader(NodeHeader * & node_header,long long pos);
   /**
    * 在每次写入前，请确认是否同步了 header指针和internal 里面的值，虽然本质上他们是一个东西
    * @param file
@@ -203,7 +203,7 @@ private:
    * @param pos 若是小于0 为末尾添加模式
    * @return 返回写入指针位置
    */
-  long long  WriteInternalNode(std::fstream & file,InternalNode * & internal_node,long long pos) ;
+  long long  WriteInternalNode(InternalNode * & internal_node,long long pos) ;
 
   /**
    * 在每次写入前，请确认是否同步了 header指针和internal 里面的值，虽然本质上他们是一个东西
@@ -212,13 +212,13 @@ private:
    * @param pos
    * @return 返回写入指针位置
    */
-  long long WriteLeafNode(std::fstream & file,LeafNode * & leaf_node,long long pos);
+  long long WriteLeafNode(LeafNode * & leaf_node,long long pos);
 
   //split the leaf node
-  void Split(std::fstream & file,LeafNode * & leaf_node);
+  void Split(LeafNode * & leaf_node);
 
   //split the internal node
-  void Split(std::fstream & file,InternalNode * internal_node);
+  void Split(InternalNode * internal_node);
 
   void ChangeFather(long long * children, int size_,long long father_offset_);
   /**
@@ -232,14 +232,14 @@ private:
    * @param file 传入文件头 是否有必要？？
    * @param leaf_node 叶节点
    */
-  void Merge(std::fstream & file,LeafNode * & leaf_node);
+  void Merge(LeafNode * & leaf_node);
 
   /**
    * 用于进行内部节点的合并,注意这里面我们对于传入节点的内存不能进行删除，不然会造成double free
    * @param file
    * @param internal_node
    */
-  void Merge(std::fstream & file,InternalNode * internal_node);
+  void Merge(InternalNode * internal_node);
 
 
 public:
