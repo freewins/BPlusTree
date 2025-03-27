@@ -470,7 +470,7 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::GetIndexOfValue(const T &value
                                 find) + key_index;
       } else {
         //这里没有找到对应值，说明这里不存在key,而此时pre_index = 0 插入位置错误
-        pre_index = leaf_node->header.count_nodes;
+        ReadLeafNode(file_,leaf_node,leaf_node->next_node_offset);
         break;
       }
     }
@@ -743,6 +743,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(std::fstream &file, Lea
         ReadLeafNode(file_, right_node, right_cur->offset);
       } else {
         //RE
+        throw std::invalid_argument("Invalid node type");
       }
       memcpy(left_node->keys_ + left_node->header.count_nodes, right_node->keys_,
              sizeof(Key) * right_node->header.count_nodes);
