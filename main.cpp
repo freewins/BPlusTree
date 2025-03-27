@@ -22,7 +22,7 @@ int main() {
       return strcmp(key_, other.key_) < 0;
     }
   };
-  BPlusTree<int,Key,400> tree("data");
+  BPlusTree<int,Key,600> tree("data");
   std::string op;
   char key[66];
   Key t;
