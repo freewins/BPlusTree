@@ -252,7 +252,7 @@ public:
 
   bool Update(const Key & key,const T & value);
 
-  std::vector<T> Search(const Key & key,bool & find);
+  sjtu::vector<T> Search(const Key & key,bool & find);
 };
 
 #include "BPlusTree.tcc"

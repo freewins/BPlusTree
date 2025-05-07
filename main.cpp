@@ -5,13 +5,15 @@
 #include "vector.hpp"
 #include "BPlusTree.hpp"
 
-void print_(std::vector<int> & res) {
-  for (auto t = res.rbegin(); t != res.rend(); t++) {
+void print_(sjtu::vector<int> & res) {
+  for (auto t = res.rbegin(); t != res.rend(); ++t) {
     std::cout << *t << " ";
   }
   std::cout<<"\n";
 }
 int main() {
+  freopen("../test/1.in", "r", stdin);
+  freopen("test1.out", "w", stdout);
   struct Key {
     char key_[66] = {};
     Key() {
@@ -28,11 +30,11 @@ int main() {
       return strcmp(key_, other.key_) == 0;
     }
   };
-  BPlusTree<int,Key,100> tree("8.data");
+  BPlusTree<int,Key,100> tree("1.data");
   std::string op;
   char key[66];
   Key t;
-  std::vector<int> res;
+  sjtu::vector<int> res;
   int n,tmp;
   std::cin >> n;
   for (int i = 1; i<= n; i++) {

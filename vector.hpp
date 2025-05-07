@@ -71,6 +71,8 @@ namespace sjtu {
      */
     class const_iterator;
 
+    class reverse_iterator;
+
     class iterator {
       // The following code is written for the C++ type_traits library.
       // Type traits is a C++ feature for describing certain properties of a type.
@@ -195,6 +197,138 @@ namespace sjtu {
        * some other operator for iterator.
        */
       bool operator!=(const iterator &rhs) const {
+        return ptr != rhs.ptr;
+      }
+
+      bool operator!=(const const_iterator &rhs) const {
+        return ptr != rhs.ptr;
+      }
+    };
+
+    class reverse_iterator {
+      // The following code is written for the C++ type_traits library.
+      // Type traits is a C++ feature for describing certain properties of a type.
+      // For instance, for an iterator, iterator::value_type is the type that the
+      // iterator points to.
+      // STL algorithms and containers may use these type_traits (e.g. the following
+      // typedef) to work properly. In particular, without the following code,
+      // @code{std::sort(iter, iter1);} would not compile.
+      // See these websites for more information:
+      // https://en.cppreference.com/w/cpp/header/type_traits
+      // About value_type: https://blog.csdn.net/u014299153/article/details/72419713
+      // About iterator_category: https://en.cppreference.com/w/cpp/iterator
+    public:
+      using difference_type = std::ptrdiff_t;
+      using value_type = T;
+      using pointer = T *;
+      using reference = T &;
+      using iterator_category = std::output_iterator_tag;
+
+    private:
+      /**
+       * TODO add data members
+       *   just add whatever you want.
+       */
+      //friend class const_iterator;
+      pointer ptr;
+
+    public:
+
+
+      reverse_iterator(pointer ptr_) : ptr(ptr_) {
+      }
+
+      /**
+       * return a new iterator which pointer n-next elements
+       * as well as operator-
+       */
+      reverse_iterator operator+(const int &n) const {
+        //TODO
+        return iterator(ptr + n);
+      }
+
+      reverse_iterator operator-(const int &n) const {
+        //TODO
+        return iterator(ptr - n);
+      }
+
+      // return the distance between two iterators,
+      // if these two iterators point to different vectors, throw invaild_iterator.
+      int operator-(const reverse_iterator &rhs) const {
+        //TODO
+        return abs(ptr - rhs.ptr);
+      }
+
+      reverse_iterator &operator+=(const int &n) {
+        //TODO
+        this->ptr += n;
+        return *this;
+      }
+
+      reverse_iterator &operator-=(const int &n) {
+        //TODO
+        this->ptr -= n;
+        return *this;
+      }
+
+      /**
+       * TODO iter++
+       */
+      reverse_iterator operator++(int) {
+        iterator tmp(*this);
+        tmp.ptr = this->ptr;
+        this->ptr = this->ptr - 1;
+        return tmp;
+      }
+
+      /**
+       * TODO ++iter
+       */
+      reverse_iterator &operator++() {
+        this->ptr = this->ptr - 1;
+        return *this;
+      }
+
+      /**
+       * TODO iter--
+       */
+      iterator operator--(int) {
+        iterator tmp;
+        tmp.ptr = this->ptr;
+        this->ptr = this->ptr + 1;
+        return tmp;
+      }
+
+      /**
+       * TODO --iter
+       */
+      iterator &operator--() {
+        this->ptr = this->ptr + 1;
+        return *this;
+      }
+
+      /**
+       * TODO *it
+       */
+      T &operator*() const {
+        return *ptr;
+      }
+
+      /**
+       * a operator to check whether two iterators are same (pointing to the same memory address).
+       */
+      bool operator==(const reverse_iterator &rhs) const {
+        return ptr == rhs.ptr;
+      }
+
+      bool operator==(const const_iterator &rhs) const {
+        return ptr == rhs.ptr;
+      }
+
+      /**
+       * some other operator for iterator.
+       */
+      bool operator!=(const reverse_iterator &rhs) const {
         return ptr != rhs.ptr;
       }
 
@@ -396,11 +530,11 @@ namespace sjtu {
       return iterator(data);
     }
 
-    iterator rend() {
-      return iterator(data + _size - 1);
+    reverse_iterator rbegin() {
+      return reverse_iterator(data + _size - 1);
     }
-    iterator rbegin() {
-      return iterator(data - 1);
+    reverse_iterator rend() {
+      return reverse_iterator(data - 1);
     }
     const_iterator cbegin() const {
       return const_iterator(data);
