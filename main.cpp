@@ -1,5 +1,8 @@
 #include <iostream>
 #include <cstring>
+#include <ctime>
+#include <iomanip>
+
 #include "BPlusTree.hpp"
 
 void print_(std::vector<int> & res) {
@@ -21,14 +24,19 @@ int main() {
     bool operator<(const Key &other) const {
       return strcmp(key_, other.key_) < 0;
     }
+    bool operator==(const Key &other) const {
+      return strcmp(key_, other.key_) == 0;
+    }
   };
-  BPlusTree<int,Key,100> tree("data");
+  BPlusTree<int,Key,100> tree("8.data");
   std::string op;
   char key[66];
   Key t;
   std::vector<int> res;
   int n,tmp;
   std::cin >> n;
+  //time_t start,end;
+  //start = std::clock();
   for (int i = 1; i<= n; i++) {
     std::cin >> op;
     if (op == "insert") {
@@ -53,8 +61,14 @@ int main() {
       else {
         std::cout << "null\n";
       }
-    }else {
+    }else if (op == "update"){
+      int tmp;
+      std::cin >> key ;
+      std::cin >> tmp;
+      std::cout << tree.Update(Key(key), tmp) <<"\n";
     }
   }
+  // end = std::clock();
+  // std::cout << "Time: "<<end - start << std::endl;
   return 0;
 }
