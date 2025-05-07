@@ -889,7 +889,7 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Insert(const Key &key, const 
 }
 
 template<class T, class Key, int degree, class Compare, class Compare_>
-std::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &key, bool &find) {
+sjtu::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &key, bool &find) {
   NodeHeader * cur = new NodeHeader(*(this->node_header_root_));
   //NodeHeader *cur = this->node_header_root_;
   InternalNode *cur_internal_node = new InternalNode();
@@ -903,7 +903,7 @@ std::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &k
   this->ReadLeafNode(cur_leaf_node, cur->offset);
   int index = Upper_Bound_Key(key,cur_leaf_node->values, cur_leaf_node->header.count_nodes) - 1;
   int pre_index = Lower_Bound_Key(key,cur_leaf_node->values, cur_leaf_node->header.count_nodes, find);
-  std::vector<T> result;
+  sjtu::vector<T> result;
   bool continue_find = find;
   int size_ = 0;
   while (continue_find || pre_index == 0) {
@@ -912,7 +912,7 @@ std::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &k
     if (continue_find) {
       find = true;
       size_ += index - pre_index + 1;
-      result.reserve(size_);
+      //result.reserve(size_);
       for (int i = index; i >= pre_index; i--) {
         result.push_back(cur_leaf_node->values[i].second);
       }

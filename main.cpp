@@ -2,10 +2,10 @@
 #include <cstring>
 #include <ctime>
 #include <iomanip>
-
+#include "vector.hpp"
 #include "BPlusTree.hpp"
 
-void print_(std::vector<int> & res) {
+void print_(sjtu::vector<int> & res) {
   for (auto t = res.rbegin(); t != res.rend(); t++) {
     std::cout << *t << " ";
   }
@@ -32,11 +32,9 @@ int main() {
   std::string op;
   char key[66];
   Key t;
-  std::vector<int> res;
+  sjtu::vector<int> res;
   int n,tmp;
   std::cin >> n;
-  //time_t start,end;
-  //start = std::clock();
   for (int i = 1; i<= n; i++) {
     std::cin >> op;
     if (op == "insert") {
@@ -68,7 +66,5 @@ int main() {
       std::cout << tree.Update(Key(key), tmp) <<"\n";
     }
   }
-  // end = std::clock();
-  // std::cout << "Time: "<<end - start << std::endl;
   return 0;
 }
