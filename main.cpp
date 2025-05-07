@@ -5,7 +5,7 @@
 #include "vector.hpp"
 #include "BPlusTree.hpp"
 
-void print_(sjtu::vector<int> & res) {
+void print_(std::vector<int> & res) {
   for (auto t = res.rbegin(); t != res.rend(); t++) {
     std::cout << *t << " ";
   }
@@ -32,7 +32,7 @@ int main() {
   std::string op;
   char key[66];
   Key t;
-  sjtu::vector<int> res;
+  std::vector<int> res;
   int n,tmp;
   std::cin >> n;
   for (int i = 1; i<= n; i++) {
