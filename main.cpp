@@ -12,8 +12,7 @@ void print_(sjtu::vector<int> & res) {
   std::cout<<"\n";
 }
 int main() {
-  freopen("../test/1.in", "r", stdin);
-  freopen("test1.out", "w", stdout);
+
   struct Key {
     char key_[66] = {};
     Key() {
@@ -30,7 +29,7 @@ int main() {
       return strcmp(key_, other.key_) == 0;
     }
   };
-  BPlusTree<int,Key,100> tree("1.data");
+  BPlusTree<int,Key,100> tree("data");
   std::string op;
   char key[66];
   Key t;
