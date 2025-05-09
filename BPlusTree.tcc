@@ -18,7 +18,7 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::Lower_Bound_Key(const Key &key
     find = false;
     return size;
   }
-  if ( key < key_values[0].first ) {
+  if (key < key_values[0].first ) {
     find = false;
     return 0;
   }
@@ -26,7 +26,7 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::Lower_Bound_Key(const Key &key
   int mid = 0;
   find = false;
   while (left <= right) {
-    mid = (left + right) / 2;
+    mid = left + right >> 1;
     if (key_values[mid].first < key) {
       left = mid + 1;
     } else if (key < key_values[mid].first) {
@@ -51,7 +51,7 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::Upper_Bound_Key(const Key &key
   int left = 0, right = size - 1;
   int mid = 0;
   while (left <= right) {
-    mid = (left + right) >> 1;
+    mid = left + right >> 1;
     if (key < key_values[mid].first) {
       right = mid - 1;
     } else {
@@ -87,7 +87,7 @@ int BPlusTree<T, Key, degree, Compare, Compare_>::Lower_Bound(const Key &key, co
   int mid = 0;
   find = false;
   while (left <= right) {
-    mid = (left + right) / 2;
+    mid = (left + right)  >> 1;
     if (key_values[mid] < tmp) {
       left = mid + 1;
     } else if (tmp < key_values[mid]) {
@@ -270,7 +270,6 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(LeafNode *&leaf_node) {
   InsertChild(new_leaf_node->header.offset, cur_internal_node->children_offset, index + 1,
               cur_internal_node->header.count_nodes + 1);
   ++cur_internal_node->header.count_nodes;
-  //
   WriteLeafNode(new_leaf_node, new_leaf_node->header.offset);
   WriteLeafNode(leaf_node, leaf_node->header.offset);
   delete new_leaf_node;
@@ -858,7 +857,6 @@ sjtu::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &
     }
   }
   delete cur;
-  //ReadNodeHeader(this->node_header_root_, this->file_header_->root_offset);
   delete cur_leaf_node;
   return result;
 }

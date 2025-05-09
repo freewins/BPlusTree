@@ -39,19 +39,19 @@ int main() {
   std::cin >> n;
   for (int i = 1; i<= n; i++) {
     std::cin >> op;
-    if (op == "insert") {
+    if (op[0] == 'i') {
       std::cin >> key;
       std::cin >> tmp;
       tree.Insert(Key(key),tmp);
     }
-    else if (op == "delete") {
+    else if (op[0] == 'd') {
       int tmp;
       std::cin >> key >> tmp;
       bool find = false;
       if (tree.Remove(Key(key),tmp)) {
       }
     }
-    else if (op == "find") {
+    else if (op[0] == 'f') {
       std::cin >> key;
       bool find = false;
       res = tree.Search(Key(key), find);
