@@ -12,7 +12,6 @@ void print_(sjtu::vector<int> & res) {
   std::cout<<"\n";
 }
 int main() {
-
   struct Key {
     char key_[66] = {};
     Key() {
@@ -29,7 +28,7 @@ int main() {
       return strcmp(key_, other.key_) == 0;
     }
   };
-  BPlusTree<int,Key,100> tree("data");
+  BPlusTree<int,Key,50> tree("data");
   std::string op;
   char key[66];
   Key t;
