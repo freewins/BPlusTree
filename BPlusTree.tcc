@@ -170,7 +170,7 @@ template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::
 ReadNodeHeader(NodeHeader *&node_header, long long pos) {
   if (file_.fail()) {
-    return;
+    file_.clear();
   }
   file_.seekg(pos, std::ios::beg);
   file_.read(reinterpret_cast<char *>(node_header), sizeof(NodeHeader));
@@ -180,7 +180,7 @@ template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare,
   Compare_>::ReadLeafNode(LeafNode *&leaf_node, long long pos) {
   if (file_.fail()) {
-    return;
+    file_.clear();
   }
   file_.seekg(pos, std::ios::beg);
   file_.read(reinterpret_cast<char *>(leaf_node), sizeof(LeafNode));
@@ -190,7 +190,7 @@ template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::ReadInternalNode(InternalNode *&internal_node,
                                                                     long long pos) {
   if (file_.fail()) {
-    return;
+    file_.clear();
   }
   file_.seekg(pos, std::ios::beg);
   file_.read(reinterpret_cast<char *>(internal_node), sizeof(InternalNode));
@@ -199,6 +199,9 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::ReadInternalNode(InternalNode
 template<class T, class Key, int degree, class Compare, class Compare_>
 long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteInternalNode(InternalNode *&internal_node,
                                                                           long long pos) {
+  if (file_.fail()) {
+    file_.clear();
+  }
   file_.seekp(pos, std::ios::beg);
   file_.write(reinterpret_cast<char *>(internal_node), sizeof(InternalNode));
   return file_.tellp();
@@ -358,6 +361,9 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::RemoveChild(long long *childr
 template<class T, class Key, int degree, class Compare, class Compare_>
 long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteNodeHeader(NodeHeader *&node_header,
                                                                         long long pos) {
+  if (file_.fail()) {
+    file_.clear();
+  }
   file_.seekg(pos, std::ios::beg);
   file_.write(reinterpret_cast<char *>(node_header), sizeof(NodeHeader));
   return file_.tellp();
@@ -366,6 +372,9 @@ long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteNodeHeader(NodeHead
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteFileHeader(FileHeader *&file_header) {
+  if (file_.fail()) {
+    file_.clear();
+  }
   file_.seekp(0, std::ios::beg);
   file_.write(reinterpret_cast<char *>(file_header_), sizeof(FileHeader));
   return file_.tellp();
@@ -374,6 +383,9 @@ long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteFileHeader(FileHead
 template<class T, class Key, int degree, class Compare, class Compare_>
 long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteLeafNode(LeafNode *&leaf_node,
                                                                       long long pos) {
+  if (file_.fail()) {
+    file_.clear();
+  }
   file_.seekp(pos, std::ios::beg);
   file_.write(reinterpret_cast<char *>(leaf_node), sizeof(LeafNode));
   return file_.tellp();
@@ -747,18 +759,20 @@ template<class T, class Key, int degree, class Compare, class Compare_>
 bool BPlusTree<T, Key, degree, Compare, Compare_>::Remove(const Key &key, const T &value) {
   NodeHeader *cur = new NodeHeader(*(this->node_header_root_));
   InternalNode *cur_internal_node = new InternalNode();
-  while (!cur->is_leaf) {
-    this->ReadInternalNode(cur_internal_node, cur->offset);
+  this->ReadInternalNode(cur_internal_node, cur->offset);//先读入一个internal node
+  while (!cur_internal_node->header.is_leaf) {
     //找到大于它的最大值
     int index = Upper_Bound(key, value, cur_internal_node->keys_, cur_internal_node->header.count_nodes);
     // |0| |1| |2| |3| |4|
     // |   |   |   |   |   \
     // |0| |1| |2| |3| |4|  |5|
-    this->ReadNodeHeader(cur, cur_internal_node->children_offset[index]);
+    // this->ReadNodeHeader(cur, cur_internal_node->children_offset[index]);
+    this->ReadInternalNode(cur_internal_node, cur_internal_node->children_offset[index]);
   }
-  delete cur_internal_node;
   LeafNode *cur_leaf_node = new LeafNode();
-  ReadLeafNode(cur_leaf_node, cur->offset);
+  ReadLeafNode(cur_leaf_node, cur_internal_node->header.offset);
+  delete cur_internal_node;
+
   bool found = false;
   int index = GetIndexOfValue(key, value, cur_leaf_node, found);
   //int index = Lower_Bound(key, cur_leaf_node->keys_, cur_leaf_node->header.count_nodes,found);
@@ -785,19 +799,20 @@ bool BPlusTree<T, Key, degree, Compare, Compare_>::Insert(const Key &key, const 
   bool notDouble = true;
   NodeHeader *cur = new NodeHeader(*(this->node_header_root_));
   InternalNode *cur_internal_node = new InternalNode();
-  while (!cur->is_leaf) {
-    this->ReadInternalNode(cur_internal_node, cur->offset);
+  this->ReadInternalNode(cur_internal_node, cur->offset);
+  while (!cur_internal_node->header.is_leaf) {
     //找到大于它的最大值
     int index = Upper_Bound(key, value, cur_internal_node->keys_, cur_internal_node->header.count_nodes);
     // |0| |1| |2| |3| |4|
     // |   |   |   |   |   \
     // |0| |1| |2| |3| |4|  |5|
-    this->ReadNodeHeader(cur, cur_internal_node->children_offset[index]);
+    this->ReadInternalNode(cur_internal_node, cur_internal_node->children_offset[index]);
   }
+  LeafNode *cur_leaf_node = new LeafNode();
+  this->ReadLeafNode(cur_leaf_node, cur_internal_node->header.offset);
   delete cur_internal_node;
   //到达叶节点
-  LeafNode *cur_leaf_node = new LeafNode();
-  this->ReadLeafNode(cur_leaf_node, cur->offset);
+
   bool found = false;
   int index = GetIndexOfValue(key, value, cur_leaf_node, found);
   if (!found) {
@@ -824,14 +839,17 @@ sjtu::vector<T> BPlusTree<T, Key, degree, Compare, Compare_>::Search(const Key &
   NodeHeader *cur = new NodeHeader(*(this->node_header_root_));
   //NodeHeader *cur = this->node_header_root_;
   InternalNode *cur_internal_node = new InternalNode();
-  while (!cur->is_leaf) {
-    ReadInternalNode(cur_internal_node, cur->offset);
+  ReadInternalNode(cur_internal_node, cur->offset);
+  while (!cur_internal_node->header.is_leaf) {
+
     int index = Upper_Bound_Key(key, cur_internal_node->keys_, cur_internal_node->header.count_nodes);
-    ReadNodeHeader(cur, cur_internal_node->children_offset[index]);
+    ReadInternalNode(cur_internal_node, cur_internal_node->children_offset[index]);
   }
-  delete cur_internal_node;
   LeafNode *cur_leaf_node = new LeafNode();
-  this->ReadLeafNode(cur_leaf_node, cur->offset);
+  this->ReadLeafNode(cur_leaf_node, cur_internal_node->header.offset);
+  delete cur_internal_node;
+
+
   int index = Upper_Bound_Key(key, cur_leaf_node->values, cur_leaf_node->header.count_nodes) - 1;
   int pre_index = Lower_Bound_Key(key, cur_leaf_node->values, cur_leaf_node->header.count_nodes, find);
   sjtu::vector<T> result;
@@ -865,14 +883,15 @@ template<class T, class Key, int degree, class Compare, class Compare_>
 bool BPlusTree<T, Key, degree, Compare, Compare_>::Update(const Key &key, const T &value) {
   NodeHeader *cur = this->node_header_root_;
   InternalNode *cur_internal_node = new InternalNode();
-  while (!cur->is_leaf) {
-    ReadInternalNode(cur_internal_node, cur->offset);
+  ReadInternalNode(cur_internal_node, cur->offset);
+  while (!cur_internal_node->header.is_leaf) {
     int index = Upper_Bound_Key(key, cur_internal_node->keys_, cur_internal_node->header.count_nodes);
-    ReadNodeHeader(cur, cur_internal_node->children_offset[index]);
+    ReadInternalNode(cur_internal_node,cur_internal_node->children_offset[index]);
   }
-  delete cur_internal_node;
   LeafNode *cur_leaf_node = new LeafNode();
-  this->ReadLeafNode(cur_leaf_node, cur->offset);
+  this->ReadLeafNode(cur_leaf_node, cur_internal_node->header.offset);
+  delete cur_internal_node;
+
   bool find = false;
   int index = Upper_Bound(key, value, cur_leaf_node->values, cur_leaf_node->header.count_nodes) - 1;
   int pre_index = Lower_Bound(key, value, cur_leaf_node->values, cur_leaf_node->header.count_nodes, find);
