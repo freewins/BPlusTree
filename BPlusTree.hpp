@@ -62,8 +62,8 @@ private:
    */
   struct InternalNode {
     NodeHeader header; //节点头
-    Kp keys_[degree]; //键值 为degree - 1
-    long long children_offset[degree + 1]={}; // 孩子的偏移值 ，标记了孩子节点的位置
+    Kp keys_[degree + 10]; //键值 为degree - 1
+    long long children_offset[degree + 11]={}; // 孩子的偏移值 ，标记了孩子节点的位置
     InternalNode() {
       memset(keys_, 0, sizeof(keys_));
     }
@@ -75,7 +75,7 @@ private:
     NodeHeader header; // 节点头
     long long pre_node_offset; //上一个节点的偏移位置
     long long next_node_offset; //下一个节点的偏移位置
-    Kp values[degree];
+    Kp values[degree + 10];
 
 
     LeafNode() {
@@ -86,7 +86,7 @@ private:
   };
 
   const std::string PATH_;
-  const int LIMIT =  (degree + 1) / 2;
+  const int LIMIT =  (degree + 1) >> 1;
   std::fstream file_;
   FileHeader * file_header_;
   NodeHeader * node_header_root_;

@@ -4,6 +4,7 @@
 #ifndef BPLUSTREE_TCC
 #define BPLUSTREE_TCC
 #include "BPlusTree.hpp"
+#include "vector.hpp"
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 long long BPlusTree<T, Key, degree, Compare, Compare_>::getEndPos() {
@@ -104,7 +105,7 @@ template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::InsertPair(const Key &new_key, const T &min_value, Kp *keys_,
                                                               const int &index, const int &size) {
   if (size >= index) {
-    Kp *cur_key = new Kp[degree];
+    Kp *cur_key = new Kp[degree + 15];
     memcpy(cur_key, keys_ + index, sizeof(Kp) * (size - index));
     keys_[index] = Kp(new_key, min_value);
     memcpy(keys_ + index + 1, cur_key, sizeof(Kp) * (size - index));
@@ -128,20 +129,6 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::RemovePair(Kp *keys_, const i
   memcpy(keys_ + index, tmp_kp, sizeof(Kp) * (size - index - 1));
   delete [] tmp_kp;
 }
-
-
-// template<class T, class Key, int degree, class Compare, class Compare_>
-// void BPlusTree<T, Key, degree, Compare, Compare_>::InsertKey(const Key &new_key, Key *keys_, const int &index,
-//                                                              const int &size) {
-//   if (size >= index) {
-//     Key *cur_key = new Key[degree];
-//     memcpy(cur_key, keys_ + index, sizeof(Key) * (size - index));
-//     keys_[index] = new_key;
-//     memcpy(keys_ + index + 1, cur_key, sizeof(Key) * (size - index));
-//     delete[] cur_key;
-//   }
-// }
-//
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::InsertChild(long long pos, long long *children, const int &index,
@@ -210,7 +197,7 @@ long long BPlusTree<T, Key, degree, Compare, Compare_>::WriteInternalNode(Intern
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::Split(LeafNode *&leaf_node) {
-  if (leaf_node->header.count_nodes < degree) {
+  if (leaf_node->header.count_nodes < degree + 10) {
     return;
   }
   int change_pos = (leaf_node->header.count_nodes / 2);
@@ -283,7 +270,7 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Split(LeafNode *&leaf_node) {
 
 template<class T, class Key, int degree, class Compare, class Compare_>
 void BPlusTree<T, Key, degree, Compare, Compare_>::Split(InternalNode *internal_node) {
-  if (internal_node->header.count_nodes < degree) {
+  if (internal_node->header.count_nodes < degree + 10) {
     return;
   }
   InternalNode *father_internal_node = new InternalNode();
