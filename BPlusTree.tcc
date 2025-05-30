@@ -616,7 +616,6 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(LeafNode *&leaf_node) {
       InternalNode *internal_node = new InternalNode();
       ReadInternalNode(internal_node, leaf_node->header.father_offset);
       //必须找左节点的位置
-      //TODO 先设为0 因为肯定寻找的是大于的位置
       int index = GetIndexOfOffset(left_node->values[0].first, left_node->values[0].second, left_node->header.offset,
                                    internal_node);
       //int index = Upper_Bound(left_node->keys_[left_node->header.count_nodes - 1], internal_node->keys_,internal_node->header.count_nodes);
@@ -700,7 +699,6 @@ void BPlusTree<T, Key, degree, Compare, Compare_>::Merge(LeafNode *&leaf_node) {
       } else {
         delete right_node;
       }
-      //TODO 执行对父节点的合并
       Merge(internal_node);
       delete internal_node;
     }
